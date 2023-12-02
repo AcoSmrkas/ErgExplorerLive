@@ -1,0 +1,36 @@
+{% extends "layout.njk" %}
+
+{% block styles %}
+	<!-- build:css styles/index.css -->
+		<link rel="stylesheet" href="styles/index.css">
+	<!-- endbuild -->
+{% endblock %}
+
+{% block navigation %}
+	{% import 'macros/nav-macro.njk' as nav %}
+	{{nav.active('home')}}
+{% endblock %}
+
+{% block content %}
+
+	<div class="glass p-3" style="min-height: 80vh; max-height: 80vh; overflow-y: scroll;">
+		<div id="mainHolder" class="row w-100">
+			<div class="col-12 p-0 mb-2"><h3>Block <span id="blockNumber"></span></h3></div>
+			<div id="contentHolder" class="col-12 ps-0 pe-0">
+				
+			</div>
+			<!--
+			<div id="statsHolder" class="col-3">
+				
+			</div>
+			-->
+		</div>
+	</div>
+
+	<br>
+{% endblock %}
+
+{% block scripts %}
+	<script src="./scripts/common/prices.js?v=22"></script>
+	<script src="./scripts/index.js?v=22"></script>
+{% endblock %}

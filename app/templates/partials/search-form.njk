@@ -1,0 +1,19 @@
+<!-- Search Box -->
+<div class="d-flex justify-content-center align-items-center h-100">
+	<div class="row w-100">
+    	<div class="col-sm-12 col-md-10 mx-auto">
+    		<div class="input-group mb-3 w-100">
+				<input id="searchInput" type="text" class="form-control form-control-lg" placeholder="Search for" onkeydown="submitSearch(event)">
+				<select id="searchType" class="form-select form-control form-control-lg" >
+				  <option value="0">Address</option>
+				  <option value="1">Transaction</option>
+				  <option value="2">Token</option>
+				  <option value="3">Block</option>
+				  <option value="4">Box</option>
+				</select>
+				<button onclick="searchAddress()" class="btn btn-lg btn-info" type="button"><i class="fas fa-search"></i></button>
+     		</div>
+    	</div>
+ 	</div>
+</div>
+<br>
