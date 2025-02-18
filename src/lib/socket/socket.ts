@@ -20,8 +20,16 @@ export function initSocket() {
 		nodeInfo.set(info);
 	});
 
-	newSocket?.on('mempoolTxs', (transactions) => {
-		mempoolTxs.set(transactions);
+	newSocket?.on('mempoolTxs', (transactions: { id: string }[]) => {
+		const currentMempoolTxs: { id: string }[] = get(mempoolTxs) as { id: string }[];
+
+		const currentTxIds = new Set(currentMempoolTxs.map((tx) => tx.id));
+		const newTxIds = new Set(transactions.map((tx) => tx.id));
+
+		const existingTxs = currentMempoolTxs.filter((tx) => newTxIds.has(tx.id));
+		const newTxs = transactions.filter((tx) => !currentTxIds.has(tx.id));
+
+		mempoolTxs.set([...existingTxs, ...newTxs]);
 	});
 
 	newSocket?.onAny(() => {

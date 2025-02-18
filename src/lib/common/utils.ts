@@ -117,7 +117,7 @@ function getDecimals(value: string | number, additional = 1): number {
 	return decimals;
 }
 
-export function nFormatter(num: number | number): string | number {
+export function nFormatter(num: number | number, decimals: number = -1, short: boolean = true): string | number {
 	let digits = getDecimals(num);
 
 	const lookup: { value: number; symbol: string }[] = [
@@ -134,6 +134,10 @@ export function nFormatter(num: number | number): string | number {
 		digits = 2;
 	}
 
+	if (decimals > -1) {
+		digits = decimals;
+	}
+
 	let minimumFractionDigits = 2;
 	if (digits < minimumFractionDigits) {
 		minimumFractionDigits = digits;
@@ -147,7 +151,7 @@ export function nFormatter(num: number | number): string | number {
 			return num >= item.value;
 		});
 
-	return item
+	return item && short
 		? (num / item.value)
 				.toLocaleString('en-US', {
 					maximumFractionDigits: digits,

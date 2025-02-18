@@ -1,1 +1,23 @@
 @import 'tailwindcss';
+
+:root {
+	--main-color: #fb5c16;
+	--main-color-hover: #FF8418;
+	--striped-1: #262626;
+	--text-color: #AAA;
+	--forms-bg: #333;
+	--borders: #4f4f4f;
+	--text-light: #999;
+	--text-strong: #CCC;
+	--background: #222;
+	--footer: var(--forms-bg);
+}
+
+body {
+    background-color: var(--background);
+    color: var(--text-color);
+}
+
+.text-primary {
+    color: var(--main-color);
+}

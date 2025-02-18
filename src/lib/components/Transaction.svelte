@@ -4,6 +4,7 @@
 	import { nFormatter, resolveBoxById, getBoxDataById, ergoTreeToAddress } from '$lib/common/utils';
 	import { onMount } from 'svelte';
 	import ErgExplorerLink from './ErgExplorerLink.svelte';
+	import { fade, fly } from 'svelte/transition';
 
 	let { transaction } = $props();
 	let thisTransaction: any = $state({});
@@ -61,10 +62,14 @@
 	});
 </script>
 
-<div class="m-2 border-1 p-2 break-all">
+<div
+	class="border-1 p-2 break-all"
+	in:fly|local={{ y: 200, duration: 300 }}
+	out:fade|local={{ duration: 300 }}
+>
 	<p>ID: <ErgExplorerLink type="transactions" value={thisTransaction.id} /></p>
 	<div class="flex">
-		<span>Total value: {nFormatter(totalValue.dividedBy(10 ** 9).toNumber())} ERG</span>
+		<span>Total value: {nFormatter(totalValue.dividedBy(10 ** 9).toNumber())} <span class="text-primary font-bold">ERG</span></span>
 
 		<button class="ms-auto" onclick={() => (showBoxDetails = !showBoxDetails)}>Show Details</button>
 	</div>
