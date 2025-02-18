@@ -2,22 +2,22 @@
 
 :root {
 	--main-color: #fb5c16;
-	--main-color-hover: #FF8418;
+	--main-color-hover: #ff8418;
 	--striped-1: #262626;
-	--text-color: #AAA;
+	--text-color: #aaa;
 	--forms-bg: #333;
 	--borders: #4f4f4f;
 	--text-light: #999;
-	--text-strong: #CCC;
+	--text-strong: #ccc;
 	--background: #222;
 	--footer: var(--forms-bg);
 }
 
 body {
-    background-color: var(--background);
-    color: var(--text-color);
+	background-color: var(--background);
+	color: var(--text-color);
 }
 
 .text-primary {
-    color: var(--main-color);
+	color: var(--main-color);
 }

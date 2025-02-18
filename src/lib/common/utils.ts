@@ -117,7 +117,11 @@ function getDecimals(value: string | number, additional = 1): number {
 	return decimals;
 }
 
-export function nFormatter(num: number | number, decimals: number = -1, short: boolean = true): string | number {
+export function nFormatter(
+	num: number | number,
+	decimals: number = -1,
+	short: boolean = true
+): string | number {
 	let digits = getDecimals(num);
 
 	const lookup: { value: number; symbol: string }[] = [

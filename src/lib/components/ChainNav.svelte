@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { nodeInfo } from '$lib/store/store';
 	import { onMount } from 'svelte';
-    import { nFormatter } from '$lib/common/utils';
+	import { nFormatter } from '$lib/common/utils';
 
 	let containerWidth: number = 0;
 	let container: Element;
@@ -31,7 +31,7 @@
 				<!-- Block -->
 				<div
 					class="flex h-18 w-18 items-center justify-center rounded-lg text-xs {i === numBlocks - 1
-						? 'bg-orange-500 text-gray-100 pulsing-box'
+						? 'pulsing-box bg-orange-500 text-gray-100'
 						: 'bg-gray-200 text-gray-900'}"
 				>
 					{nFormatter($nodeInfo.fullHeight - numBlocks + i + 2, 0, false)}
@@ -84,17 +84,16 @@
 		animation-delay: 0.4s;
 	}
 
-    @keyframes pulse {
-    0% {
-        box-shadow: 0 0 0 0 rgba(255, 105, 0, 0.7);
-    }
-    100% {
-        box-shadow: 0 0 15px 15px rgba(255, 105, 0, 0);
-    }
-    }
+	@keyframes pulse {
+		0% {
+			box-shadow: 0 0 0 0 rgba(255, 105, 0, 0.7);
+		}
+		100% {
+			box-shadow: 0 0 15px 15px rgba(255, 105, 0, 0);
+		}
+	}
 
-    .pulsing-box {
-        animation: pulse 1.15s infinite ease-out;
-    }
-
+	.pulsing-box {
+		animation: pulse 1.15s infinite ease-out;
+	}
 </style>

@@ -69,7 +69,10 @@
 >
 	<p>ID: <ErgExplorerLink type="transactions" value={thisTransaction.id} /></p>
 	<div class="flex">
-		<span>Total value: {nFormatter(totalValue.dividedBy(10 ** 9).toNumber())} <span class="text-primary font-bold">ERG</span></span>
+		<span
+			>Total value: {nFormatter(totalValue.dividedBy(10 ** 9).toNumber())}
+			<span class="text-primary font-bold">ERG</span></span
+		>
 
 		<button class="ms-auto" onclick={() => (showBoxDetails = !showBoxDetails)}>Show Details</button>
 	</div>
