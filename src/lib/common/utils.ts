@@ -1,8 +1,49 @@
 import axios from 'axios';
 import { get } from 'svelte/store';
-import { EXPLORER_API } from '$lib/common/const';
-import { mempoolTxs, tempBoxData } from '$lib/store/store';
+import { EXPLORER_API, ERGEXPLORER_API } from '$lib/common/const';
+import { mempoolTxs, tempBoxData, assetInfos, fetchingAssetData } from '$lib/store/store';
 import { ErgoAddress } from '@fleet-sdk/core';
+
+export async function getAssetInfos(ids: Array<string>) {
+	const assets = get(assetInfos) as { [key: string]: unknown };
+	const assetIds = Object.keys(assets as object);
+
+	ids = ids.filter((id) => !assetIds.includes(id));
+
+	if (ids.length == 0) return;
+
+	fetchingAssetData.set(true);
+
+	const response = await axios.post(`${ERGEXPLORER_API}tokens/byId`, { ids: ids });
+
+	fetchingAssetData.set(false);
+
+	const newData = response.data.items;
+
+	for (const data of newData) {
+		assets[data.id] = data;
+	}
+
+	assetInfos.set(assets);
+}
+
+export function collectTokenIds(transactions) {
+	const tokenIds = new Set();
+
+	transactions.forEach((tx) => {
+		// Process inputs
+		tx.inputs
+			?.flatMap((input) => input.assets || [])
+			.forEach((asset) => asset.tokenId && tokenIds.add(asset.tokenId));
+
+		// Process outputs
+		tx.outputs
+			?.flatMap((output) => output.assets || [])
+			.forEach((asset) => asset.tokenId && tokenIds.add(asset.tokenId));
+	});
+
+	return Array.from(tokenIds);
+}
 
 export function truncateAddress(address: string, len: number) {
 	return `${address.substring(0, len)}...${address.substring(address.length - len)}`;
@@ -118,7 +159,7 @@ function getDecimals(value: string | number, additional = 1): number {
 }
 
 export function nFormatter(
-	num: number | number,
+	num: number,
 	decimals: number = -1,
 	short: boolean = true
 ): string | number {

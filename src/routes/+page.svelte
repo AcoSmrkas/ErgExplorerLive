@@ -1,22 +1,20 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import { nodeInfo, mempoolTxs } from '$lib/store/store';
-	import Transaction from '$lib/components/Transaction.svelte';
+	import { nFormatter } from '$lib/common/utils';
 	import ChainNav from '$lib/components/ChainNav.svelte';
 	import Navbar from '$lib/components/Navbar.svelte';
+	import TransactionsGrid from '$lib/components/TransactionsGrid.svelte';
 
 	let blockHeight: number = $state(0);
-	let transactions = $state([]);
 
 	onMount(() => {
 		const nodeInfoUnsubscribe = nodeInfo.subscribe(
 			(value: any) => (blockHeight = value.fullHeight)
 		);
-		const mempoolTxsUnsubscribe = mempoolTxs.subscribe((value: any) => (transactions = value));
 
 		return () => {
 			nodeInfoUnsubscribe();
-			mempoolTxsUnsubscribe();
 		};
 	});
 </script>
@@ -24,16 +22,12 @@
 <Navbar />
 
 <div class="p-2">
-	<div class="mt-19 mb-2">
-		<p>Block height: {blockHeight}</p>
-		<p>Mempool transactions: {transactions.length}</p>
+	<div class="mt-12 mb-2 ps-2 md:mt-17">
+		<p>Block height: {nFormatter(blockHeight, 0, false)}</p>
+		<p>Transactions in mempool: {nFormatter($mempoolTxs.length, 0, false)}</p>
 	</div>
 
-	<div class="grid max-h-[605px] grid-cols-1 gap-3 overflow-y-scroll lg:grid-cols-2">
-		{#each transactions as transaction}
-			<Transaction {transaction} />
-		{/each}
-	</div>
+	<TransactionsGrid />
 
 	<ChainNav />
 </div>

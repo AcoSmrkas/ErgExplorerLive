@@ -1,14 +1,18 @@
 <script lang="ts">
 	import { BigNumber } from 'bignumber.js';
-	import Box from '$lib/components/Box.svelte';
 	import { nFormatter, resolveBoxById, getBoxDataById, ergoTreeToAddress } from '$lib/common/utils';
 	import { onMount } from 'svelte';
+	import Box from '$lib/components/Box.svelte';
+	import Asset from './Asset.svelte';
 	import ErgExplorerLink from './ErgExplorerLink.svelte';
 	import { fade, fly } from 'svelte/transition';
 
 	let { transaction } = $props();
 	let thisTransaction: any = $state({});
 	let showBoxDetails = $state(false);
+	let showCoolBoxDetails = $state(true);
+	let assets: { [key: string]: { tokenId: string; decimals: number; amount: any; name?: string } } =
+		$state({});
 
 	let totalValue: BigNumber = $derived(
 		transaction.outputs.reduce(
@@ -37,6 +41,8 @@
 		}
 
 		thisTransaction = proxyTx;
+
+		setTimeout(updateAssets, 0);
 	});
 
 	async function resolveInputBoxes() {
@@ -53,6 +59,47 @@
 		}
 
 		thisTransaction = proxyTx;
+
+		updateAssets();
+	}
+
+	function updateAssets() {
+		assets = thisTransaction.outputs
+			.flatMap((output: { assets: any }) => output.assets)
+			.reduce(
+				(
+					acc: { [x: string]: { tokenId: string; decimals: number; amount: any } },
+					{ tokenId, decimals, amount }: any
+				) => {
+					if (!acc[tokenId]) {
+						acc[tokenId] = { tokenId, decimals, amount: 0 };
+					}
+					acc[tokenId].amount += amount;
+					return acc;
+				},
+				{}
+			);
+
+		const newAssets = {
+			ERG: {
+				tokenId: 'ERG',
+				decimals: 9,
+				amount: new BigNumber(0)
+			},
+			...assets
+		};
+
+		assets = newAssets;
+
+		assets['ERG'] = {
+			name: 'ERG',
+			tokenId: 'ERG',
+			decimals: 9,
+			amount: thisTransaction.outputs.reduce(
+				(total: BigNumber, output: any) => total.plus(output.value),
+				new BigNumber(0)
+			)
+		};
 	}
 
 	onMount(async () => {
@@ -63,33 +110,41 @@
 </script>
 
 <div
-	class="border-1 p-2 break-all"
-	in:fly|local={{ y: 200, duration: 300 }}
+	class="tx-container flex flex-wrap place-content-around gap-y-7 rounded-md border-1 border-[#555] p-2"
+	in:fly|local={{ y: 100, duration: 300 }}
 	out:fade|local={{ duration: 300 }}
 >
-	<p>ID: <ErgExplorerLink type="transactions" value={thisTransaction.id} /></p>
-	<div class="flex">
-		<span
-			>Total value: {nFormatter(totalValue.dividedBy(10 ** 9).toNumber())}
-			<span class="text-primary font-bold">ERG</span></span
-		>
+	{#if !showCoolBoxDetails}
+		<p>ID: <ErgExplorerLink type="transactions" value={thisTransaction.id} /></p>
+		<div class="flex">
+			<span
+				>Total value: {nFormatter(totalValue.dividedBy(10 ** 9).toNumber())}
+				<span class="text-primary font-bold">ERG</span></span
+			>
 
-		<button class="ms-auto" onclick={() => (showBoxDetails = !showBoxDetails)}>Show Details</button>
-	</div>
+			<button class="ms-auto" onclick={() => (showBoxDetails = !showBoxDetails)}
+				>Show Details</button
+			>
+		</div>
 
-	{#if showBoxDetails}
-		<br />
+		{#if showBoxDetails}
+			<br />
 
-		<p>Inputs:</p>
-		{#each thisTransaction.inputs as box}
-			<Box {box} />
-		{/each}
+			<p>Inputs:</p>
+			{#each thisTransaction.inputs as box}
+				<Box {box} />
+			{/each}
 
-		<br />
+			<br />
 
-		<p>Outputs:</p>
-		{#each thisTransaction.outputs as box}
-			<Box {box} />
+			<p>Outputs:</p>
+			{#each thisTransaction.outputs as box}
+				<Box {box} />
+			{/each}
+		{/if}
+	{:else}
+		{#each Object.entries(assets) as [tokenId, asset]}
+			<Asset {asset} />
 		{/each}
 	{/if}
 </div>

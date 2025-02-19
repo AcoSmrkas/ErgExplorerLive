@@ -3,6 +3,7 @@
 	import { onMount } from 'svelte';
 	import { socket } from '$lib/store/store';
 	import { initSocket } from '$lib/socket/socket';
+	import Loading from '$lib/components/Loading.svelte';
 	import type { Socket } from 'socket.io-client';
 
 	let { children } = $props();
@@ -24,5 +25,5 @@
 {#if socketConnected}
 	{@render children()}
 {:else}
-	<p>Connecting...</p>
+	<Loading />
 {/if}

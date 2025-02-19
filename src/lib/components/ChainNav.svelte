@@ -7,7 +7,9 @@
 	let container: Element;
 
 	const getNumBlocks = (width: number) => {
+		if (width < 420) return 2;
 		if (width < 640) return 3;
+		if (width < 800) return 4;
 		if (width < 1024) return 5;
 		return 7;
 	};
@@ -24,15 +26,18 @@
 	});
 </script>
 
-<div bind:this={container} class="fixed bottom-0 left-0 w-full bg-[#333] p-6">
+<div bind:this={container} class="fixed bottom-0 left-0 w-full bg-[#333] p-3 md:p-6">
 	<div class="flex items-center justify-center gap-8">
 		{#each Array(numBlocks) as _, i}
 			<div class="flex items-center">
 				<!-- Block -->
 				<div
-					class="flex h-18 w-18 items-center justify-center rounded-lg text-xs {i === numBlocks - 1
-						? 'pulsing-box bg-orange-500 text-gray-100'
-						: 'bg-gray-200 text-gray-900'}"
+					class="flex h-15 w-15 items-center justify-center rounded-lg text-[0.6rem] {i ===
+					numBlocks - 1
+						? 'pulsing-box bg-primary text-gray-100'
+						: 'bg-gray-200 text-gray-900'} {numBlocks > 2
+						? 'md:h-18 md:w-18 md:text-[0.7rem]'
+						: ''}"
 				>
 					{nFormatter($nodeInfo.fullHeight - numBlocks + i + 2, 0, false)}
 				</div>
@@ -42,9 +47,9 @@
 					<div class="ms-7 flex gap-2">
 						{#if i === numBlocks - 2}
 							<!-- Animated dots for the last connection -->
-							<div class="animated-dot h-1.5 w-1.5 rounded-full bg-orange-400"></div>
-							<div class="animated-dot h-1.5 w-1.5 rounded-full bg-orange-400"></div>
-							<div class="animated-dot h-1.5 w-1.5 rounded-full bg-orange-400"></div>
+							<div class="animated-dot bg-primary h-1.5 w-1.5 rounded-full"></div>
+							<div class="animated-dot bg-primary h-1.5 w-1.5 rounded-full"></div>
+							<div class="animated-dot bg-primary h-1.5 w-1.5 rounded-full"></div>
 						{:else}
 							<!-- Static dots for other connections -->
 							<div class="h-1.5 w-1.5 rounded-full bg-gray-400"></div>
@@ -86,10 +91,10 @@
 
 	@keyframes pulse {
 		0% {
-			box-shadow: 0 0 0 0 rgba(255, 105, 0, 0.7);
+			box-shadow: 0 0 0 0 rgba(251, 92, 22, 0.7);
 		}
 		100% {
-			box-shadow: 0 0 15px 15px rgba(255, 105, 0, 0);
+			box-shadow: 0 0 15px 15px rgba(251, 92, 22, 0);
 		}
 	}
 

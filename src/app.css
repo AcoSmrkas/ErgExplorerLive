@@ -21,3 +21,19 @@ body {
 .text-primary {
 	color: var(--main-color);
 }
+
+.border-primary {
+	border-color: var(--main-color);
+}
+
+.bg-primary {
+	background: var(--main-color);
+}
+
+.bg-bg {
+	background: var(--background);
+}
+
+.bg-form {
+	background: var(--forms-bg);
+}
