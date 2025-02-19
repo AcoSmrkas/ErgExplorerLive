@@ -1,8 +1,150 @@
 import axios from 'axios';
+import BigNumber from 'bignumber.js';
 import { get } from 'svelte/store';
 import { EXPLORER_API, ERGEXPLORER_API } from '$lib/common/const';
-import { mempoolTxs, tempBoxData, assetInfos, fetchingAssetData } from '$lib/store/store';
+import { mempoolTxs, tempBoxData, assetInfos, fetchingAssetData, fetchingBoxData } from '$lib/store/store';
 import { ErgoAddress } from '@fleet-sdk/core';
+
+interface TransactionInput {
+	address?: string;
+	value?: number;
+	assets?: { tokenId: string; amount: number; decimals: number }[];
+}
+
+interface TransactionOutput {
+	address?: string;
+	value?: number;
+	assets?: { tokenId: string; amount: number; decimals: number }[];
+}
+
+export function trackNetAssetTransfers(thisTransaction: {
+	inputs: TransactionInput[];
+	outputs: TransactionOutput[];
+}) {
+	// Import BigNumber if not already imported
+	// import BigNumber from 'bignumber.js';
+
+	// Step 1: Create maps to track assets by address
+	const inputsByAddress = new Map<string, Map<string, BigNumber>>();
+	const outputsByAddress = new Map<string, Map<string, BigNumber>>();
+	const assetDecimals = new Map<string, number>();
+
+	// Track ERG specially
+	assetDecimals.set('ERG', 9);
+
+	// Step 2: Process inputs
+	thisTransaction.inputs.forEach((input) => {
+		const address = input.address;
+		if (!address) return;
+
+		if (!inputsByAddress.has(address)) {
+			inputsByAddress.set(address, new Map<string, BigNumber>());
+		}
+		const addressAssets = inputsByAddress.get(address)!;
+
+		// Process ERG
+		if (input.value !== undefined) {
+			const tokenId = 'ERG';
+			const currentAmount = addressAssets.get(tokenId) || new BigNumber(0);
+			addressAssets.set(tokenId, currentAmount.plus(new BigNumber(input.value)));
+		}
+
+		// Process other assets
+		if (input.assets) {
+			input.assets.forEach((asset: { tokenId: string; amount: number; decimals: number }) => {
+				if (!asset.tokenId) return;
+
+				// Store decimals info
+				if (asset.decimals !== undefined && !assetDecimals.has(asset.tokenId)) {
+					assetDecimals.set(asset.tokenId, asset.decimals);
+				}
+
+				const currentAmount = addressAssets.get(asset.tokenId) || new BigNumber(0);
+				addressAssets.set(asset.tokenId, currentAmount.plus(new BigNumber(asset.amount || 0)));
+			});
+		}
+	});
+
+	// Step 3: Process outputs
+	thisTransaction.outputs.forEach((output) => {
+		const address = output.address;
+		if (!address) return;
+
+		if (!outputsByAddress.has(address)) {
+			outputsByAddress.set(address, new Map<string, BigNumber>());
+		}
+		const addressAssets = outputsByAddress.get(address)!;
+
+		// Process ERG
+		if (output.value !== undefined) {
+			const tokenId = 'ERG';
+			const currentAmount = addressAssets.get(tokenId) || new BigNumber(0);
+			addressAssets.set(tokenId, currentAmount.plus(new BigNumber(output.value)));
+		}
+
+		// Process other assets
+		if (output.assets) {
+			output.assets.forEach((asset: { tokenId: string; amount: number; decimals: number }) => {
+				if (!asset.tokenId) return;
+
+				// Store decimals info
+				if (asset.decimals !== undefined && !assetDecimals.has(asset.tokenId)) {
+					assetDecimals.set(asset.tokenId, asset.decimals);
+				}
+
+				const currentAmount = addressAssets.get(asset.tokenId) || new BigNumber(0);
+				addressAssets.set(asset.tokenId, currentAmount.plus(new BigNumber(asset.amount || 0)));
+			});
+		}
+	});
+
+	// Step 4: Calculate total transfers between different addresses
+	const transferredAssets: {
+		[tokenId: string]: {
+			tokenId: string;
+			decimals: number;
+			amount: BigNumber;
+		};
+	} = {};
+
+	// Calculate total inputs for each token
+	const totalInputs = new Map<string, BigNumber>();
+	inputsByAddress.forEach((assets) => {
+		assets.forEach((amount, tokenId) => {
+			const current = totalInputs.get(tokenId) || new BigNumber(0);
+			totalInputs.set(tokenId, current.plus(amount));
+		});
+	});
+
+	// For each address in outputs
+	outputsByAddress.forEach((outputAssets, address) => {
+		// Get corresponding inputs for this address
+		const inputAssets = inputsByAddress.get(address) || new Map<string, BigNumber>();
+
+		outputAssets.forEach((outputAmount, tokenId) => {
+			const inputAmount = inputAssets.get(tokenId) || new BigNumber(0);
+
+			// Calculate amount received from other addresses
+			const receivedFromOthers = outputAmount.isGreaterThan(inputAmount)
+				? outputAmount.minus(inputAmount)
+				: new BigNumber(0);
+
+			if (receivedFromOthers.isGreaterThan(0)) {
+				if (!transferredAssets[tokenId]) {
+					transferredAssets[tokenId] = {
+						tokenId,
+						decimals: assetDecimals.get(tokenId) || 0,
+						amount: new BigNumber(0)
+					};
+				}
+				transferredAssets[tokenId].amount =
+					transferredAssets[tokenId].amount.plus(receivedFromOthers);
+			}
+		});
+	});
+
+	return transferredAssets;
+}
 
 export async function getAssetInfos(ids: Array<string>) {
 	const assets = get(assetInfos) as { [key: string]: unknown };
@@ -27,8 +169,13 @@ export async function getAssetInfos(ids: Array<string>) {
 	assetInfos.set(assets);
 }
 
-export function collectTokenIds(transactions) {
-	const tokenIds = new Set();
+export function collectTokenIds(
+	transactions: {
+		inputs?: { assets?: { tokenId: string }[] }[];
+		outputs?: { assets?: { tokenId: string }[] }[];
+	}[]
+): string[] {
+	const tokenIds = new Set<string>();
 
 	transactions.forEach((tx) => {
 		// Process inputs
@@ -92,6 +239,10 @@ export async function resolveBoxById(boxId: string) {
 	const currentBoxData = get(tempBoxData) as unknown as { [key: string]: unknown };
 	let box = null;
 
+	if (currentBoxData[boxId] !== undefined) {
+		return currentBoxData[boxId];
+	}
+
 	try {
 		console.log('Fetching data for box', boxId);
 		const boxData = await axios.get(`${EXPLORER_API}boxes/${boxId}`);
@@ -110,6 +261,40 @@ export async function resolveBoxById(boxId: string) {
 	}
 
 	return box;
+}
+
+export function resolveTxBoxes(tx: unknown) {
+	const proxyTx = JSON.parse(JSON.stringify(tx));
+
+	for (let i = 0; i < proxyTx.outputs.length; i++) {
+		const output = proxyTx.outputs[i];
+
+		proxyTx.outputs[i].address = ergoTreeToAddress(output.ergoTree);
+	}
+
+	for (let i = 0; i < proxyTx.inputs.length; i++) {
+		const input = proxyTx.inputs[i];
+
+		const boxData = getBoxDataById(input.boxId);
+
+		if (boxData) {
+			proxyTx.inputs[i] = boxData;
+		}
+	}
+
+	return proxyTx;
+}
+
+export async function getBoxInfos(ids: Array<string>) {
+	if (ids.length === 0) return [];
+
+	fetchingBoxData.set(true);
+
+	const result = await Promise.all(ids.map((id) => resolveBoxById(id)));
+
+	fetchingBoxData.set(false);
+
+	return result;
 }
 
 export function ergoTreeToAddress(ergoTree: string) {

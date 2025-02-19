@@ -10,3 +10,26 @@
 		<div style="display: contents">%sveltekit.body%</div>
 	</body>
 </html>
+
+<style>
+	@keyframes fadeInUp {
+		from {
+			opacity: 0;
+			transform: translateY(20px);
+		}
+		to {
+			opacity: 1;
+			transform: translateY(0);
+		}
+	}
+
+	.svlt-grid-item {
+		pointer-events: none !important;
+	}
+
+	.tx-container {
+		opacity: 1;
+		animation: fadeInUp 0.5s ease-out;
+		pointer-events: all !important;
+	}
+</style>

@@ -1,11 +1,18 @@
 <script lang="ts">
 	import { BigNumber } from 'bignumber.js';
-	import { nFormatter, resolveBoxById, getBoxDataById, ergoTreeToAddress } from '$lib/common/utils';
+	import {
+		nFormatter,
+		getBoxDataById,
+		ergoTreeToAddress,
+		trackNetAssetTransfers
+	} from '$lib/common/utils';
 	import { onMount } from 'svelte';
 	import Box from '$lib/components/Box.svelte';
 	import Asset from './Asset.svelte';
+	import SmallLoading from '$lib/components/SmallLoading.svelte';
 	import ErgExplorerLink from './ErgExplorerLink.svelte';
-	import { fade, fly } from 'svelte/transition';
+	import { fade } from 'svelte/transition';
+	import { ERGEXPLORER_URL } from '$lib/common/const';
 
 	let { transaction } = $props();
 	let thisTransaction: any = $state({});
@@ -45,106 +52,56 @@
 		setTimeout(updateAssets, 0);
 	});
 
-	async function resolveInputBoxes() {
-		const proxyTx = JSON.parse(JSON.stringify(transaction));
-
-		for (let i = 0; i < thisTransaction.inputs.length; i++) {
-			let input = thisTransaction.inputs[i];
-
-			const boxData = await resolveBoxById(input.boxId);
-
-			if (boxData) {
-				thisTransaction.inputs[i] = boxData;
-			}
-		}
-
-		thisTransaction = proxyTx;
-
-		updateAssets();
-	}
-
 	function updateAssets() {
-		assets = thisTransaction.outputs
-			.flatMap((output: { assets: any }) => output.assets)
-			.reduce(
-				(
-					acc: { [x: string]: { tokenId: string; decimals: number; amount: any } },
-					{ tokenId, decimals, amount }: any
-				) => {
-					if (!acc[tokenId]) {
-						acc[tokenId] = { tokenId, decimals, amount: 0 };
-					}
-					acc[tokenId].amount += amount;
-					return acc;
-				},
-				{}
-			);
-
-		const newAssets = {
-			ERG: {
-				tokenId: 'ERG',
-				decimals: 9,
-				amount: new BigNumber(0)
-			},
-			...assets
-		};
-
-		assets = newAssets;
-
-		assets['ERG'] = {
-			name: 'ERG',
-			tokenId: 'ERG',
-			decimals: 9,
-			amount: thisTransaction.outputs.reduce(
-				(total: BigNumber, output: any) => total.plus(output.value),
-				new BigNumber(0)
-			)
-		};
+		assets = trackNetAssetTransfers(thisTransaction);
 	}
 
 	onMount(async () => {
 		thisTransaction = JSON.parse(JSON.stringify(transaction));
-
-		resolveInputBoxes();
 	});
 </script>
 
-<div
-	class="tx-container flex flex-wrap place-content-around gap-y-7 rounded-md border-1 border-[#555] p-2"
-	in:fly|local={{ y: 100, duration: 300 }}
-	out:fade|local={{ duration: 300 }}
->
-	{#if !showCoolBoxDetails}
-		<p>ID: <ErgExplorerLink type="transactions" value={thisTransaction.id} /></p>
-		<div class="flex">
-			<span
-				>Total value: {nFormatter(totalValue.dividedBy(10 ** 9).toNumber())}
-				<span class="text-primary font-bold">ERG</span></span
-			>
+<a target="_new" href={`${ERGEXPLORER_URL}transactions/${thisTransaction.id}`}>
+	<div
+		class="tx-container flex flex-wrap place-content-around gap-y-7 rounded-md border-1 border-[#555] p-2"
+		out:fade|local={{ duration: 300 }}
+	>
+		{#if !showCoolBoxDetails}
+			<p>ID: <ErgExplorerLink type="transactions" value={thisTransaction.id} /></p>
+			<div class="flex">
+				<span
+					>Total value: {nFormatter(totalValue.dividedBy(10 ** 9).toNumber())}
+					<span class="text-primary font-bold">ERG</span></span
+				>
 
-			<button class="ms-auto" onclick={() => (showBoxDetails = !showBoxDetails)}
-				>Show Details</button
-			>
-		</div>
+				<button class="ms-auto" onclick={() => (showBoxDetails = !showBoxDetails)}
+					>Show Details</button
+				>
+			</div>
 
-		{#if showBoxDetails}
-			<br />
+			{#if showBoxDetails}
+				<br />
 
-			<p>Inputs:</p>
-			{#each thisTransaction.inputs as box}
-				<Box {box} />
-			{/each}
+				<p>Inputs:</p>
+				{#each thisTransaction.inputs as box}
+					<Box {box} />
+				{/each}
 
-			<br />
+				<br />
 
-			<p>Outputs:</p>
-			{#each thisTransaction.outputs as box}
-				<Box {box} />
-			{/each}
+				<p>Outputs:</p>
+				{#each thisTransaction.outputs as box}
+					<Box {box} />
+				{/each}
+			{/if}
+		{:else}
+			{#if Object.keys(assets).length > 0}
+				{#each Object.entries(assets) as [tokenId, asset]}
+					<Asset {asset} />
+				{/each}
+			{:else}
+				<SmallLoading />
+			{/if}
 		{/if}
-	{:else}
-		{#each Object.entries(assets) as [tokenId, asset]}
-			<Asset {asset} />
-		{/each}
-	{/if}
-</div>
+	</div>
+</a>
