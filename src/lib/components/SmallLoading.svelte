@@ -32,8 +32,8 @@
 		position: relative;
 		width: 65px;
 		height: 65px;
-        top: 2px;
-        left: 2px;
+		top: 2px;
+		left: 2px;
 		border: 2px solid var(--main-color);
 	}
 

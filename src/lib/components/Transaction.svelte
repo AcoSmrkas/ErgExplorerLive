@@ -94,14 +94,12 @@
 					<Box {box} />
 				{/each}
 			{/if}
+		{:else if Object.keys(assets).length > 0}
+			{#each Object.entries(assets) as [tokenId, asset]}
+				<Asset {asset} />
+			{/each}
 		{:else}
-			{#if Object.keys(assets).length > 0}
-				{#each Object.entries(assets) as [tokenId, asset]}
-					<Asset {asset} />
-				{/each}
-			{:else}
-				<SmallLoading />
-			{/if}
+			<SmallLoading />
 		{/if}
 	</div>
 </a>

@@ -2,31 +2,35 @@ import axios from 'axios';
 import BigNumber from 'bignumber.js';
 import { get } from 'svelte/store';
 import { EXPLORER_API, ERGEXPLORER_API } from '$lib/common/const';
-import { mempoolTxs, tempBoxData, assetInfos, fetchingAssetData, fetchingBoxData } from '$lib/store/store';
+import {
+	mempoolTxs,
+	tempBoxData,
+	assetInfos,
+	fetchingAssetData,
+	fetchingBoxData
+} from '$lib/store/store';
 import { ErgoAddress } from '@fleet-sdk/core';
 
-interface TransactionInput {
-	address?: string;
-	value?: number;
-	assets?: { tokenId: string; amount: number; decimals: number }[];
-}
-
-interface TransactionOutput {
-	address?: string;
-	value?: number;
-	assets?: { tokenId: string; amount: number; decimals: number }[];
-}
-
 export function trackNetAssetTransfers(thisTransaction: {
-	inputs: TransactionInput[];
-	outputs: TransactionOutput[];
+	inputs: {
+		address?: string;
+		value?: number;
+		assets?: { tokenId: string; amount: number; decimals: number }[];
+	}[];
+	outputs: {
+		address?: string;
+		value?: number;
+		assets?: { tokenId: string; amount: number; decimals: number }[];
+	}[];
 }) {
 	// Import BigNumber if not already imported
 	// import BigNumber from 'bignumber.js';
 
-	// Step 1: Create maps to track assets by address
+	// Step 1: Create maps to track assets by address and total amounts
 	const inputsByAddress = new Map<string, Map<string, BigNumber>>();
 	const outputsByAddress = new Map<string, Map<string, BigNumber>>();
+	const totalInputsByToken = new Map<string, BigNumber>();
+	const totalOutputsByToken = new Map<string, BigNumber>();
 	const assetDecimals = new Map<string, number>();
 
 	// Track ERG specially
@@ -45,8 +49,15 @@ export function trackNetAssetTransfers(thisTransaction: {
 		// Process ERG
 		if (input.value !== undefined) {
 			const tokenId = 'ERG';
+			const amount = new BigNumber(input.value);
+
+			// Update address-specific tracking
 			const currentAmount = addressAssets.get(tokenId) || new BigNumber(0);
-			addressAssets.set(tokenId, currentAmount.plus(new BigNumber(input.value)));
+			addressAssets.set(tokenId, currentAmount.plus(amount));
+
+			// Update total tracking
+			const currentTotal = totalInputsByToken.get(tokenId) || new BigNumber(0);
+			totalInputsByToken.set(tokenId, currentTotal.plus(amount));
 		}
 
 		// Process other assets
@@ -59,8 +70,15 @@ export function trackNetAssetTransfers(thisTransaction: {
 					assetDecimals.set(asset.tokenId, asset.decimals);
 				}
 
+				const amount = new BigNumber(asset.amount || 0);
+
+				// Update address-specific tracking
 				const currentAmount = addressAssets.get(asset.tokenId) || new BigNumber(0);
-				addressAssets.set(asset.tokenId, currentAmount.plus(new BigNumber(asset.amount || 0)));
+				addressAssets.set(asset.tokenId, currentAmount.plus(amount));
+
+				// Update total tracking
+				const currentTotal = totalInputsByToken.get(asset.tokenId) || new BigNumber(0);
+				totalInputsByToken.set(asset.tokenId, currentTotal.plus(amount));
 			});
 		}
 	});
@@ -78,8 +96,15 @@ export function trackNetAssetTransfers(thisTransaction: {
 		// Process ERG
 		if (output.value !== undefined) {
 			const tokenId = 'ERG';
+			const amount = new BigNumber(output.value);
+
+			// Update address-specific tracking
 			const currentAmount = addressAssets.get(tokenId) || new BigNumber(0);
-			addressAssets.set(tokenId, currentAmount.plus(new BigNumber(output.value)));
+			addressAssets.set(tokenId, currentAmount.plus(amount));
+
+			// Update total tracking
+			const currentTotal = totalOutputsByToken.get(tokenId) || new BigNumber(0);
+			totalOutputsByToken.set(tokenId, currentTotal.plus(amount));
 		}
 
 		// Process other assets
@@ -92,55 +117,91 @@ export function trackNetAssetTransfers(thisTransaction: {
 					assetDecimals.set(asset.tokenId, asset.decimals);
 				}
 
+				const amount = new BigNumber(asset.amount || 0);
+
+				// Update address-specific tracking
 				const currentAmount = addressAssets.get(asset.tokenId) || new BigNumber(0);
-				addressAssets.set(asset.tokenId, currentAmount.plus(new BigNumber(asset.amount || 0)));
+				addressAssets.set(asset.tokenId, currentAmount.plus(amount));
+
+				// Update total tracking
+				const currentTotal = totalOutputsByToken.get(asset.tokenId) || new BigNumber(0);
+				totalOutputsByToken.set(asset.tokenId, currentTotal.plus(amount));
 			});
 		}
 	});
 
-	// Step 4: Calculate total transfers between different addresses
+	// Step 4: Calculate transfers between different addresses
 	const transferredAssets: {
 		[tokenId: string]: {
 			tokenId: string;
 			decimals: number;
 			amount: BigNumber;
+			minted: BigNumber;
+			burned: BigNumber;
 		};
 	} = {};
 
-	// Calculate total inputs for each token
-	const totalInputs = new Map<string, BigNumber>();
-	inputsByAddress.forEach((assets) => {
-		assets.forEach((amount, tokenId) => {
-			const current = totalInputs.get(tokenId) || new BigNumber(0);
-			totalInputs.set(tokenId, current.plus(amount));
-		});
-	});
+	// First, identify all tokens in the transaction
+	const allTokens = new Set<string>();
+	totalInputsByToken.forEach((_, tokenId) => allTokens.add(tokenId));
+	totalOutputsByToken.forEach((_, tokenId) => allTokens.add(tokenId));
 
-	// For each address in outputs
-	outputsByAddress.forEach((outputAssets, address) => {
-		// Get corresponding inputs for this address
-		const inputAssets = inputsByAddress.get(address) || new Map<string, BigNumber>();
+	// For each token, calculate transfers, minting and burning
+	allTokens.forEach((tokenId) => {
+		const totalInputAmount = totalInputsByToken.get(tokenId) || new BigNumber(0);
+		const totalOutputAmount = totalOutputsByToken.get(tokenId) || new BigNumber(0);
 
-		outputAssets.forEach((outputAmount, tokenId) => {
-			const inputAmount = inputAssets.get(tokenId) || new BigNumber(0);
+		// Initialize tracking for this token
+		transferredAssets[tokenId] = {
+			tokenId,
+			decimals: assetDecimals.get(tokenId) || 0,
+			amount: new BigNumber(0),
+			minted: new BigNumber(0),
+			burned: new BigNumber(0)
+		};
+
+		// Check for minting and burning
+		if (totalOutputAmount.isGreaterThan(totalInputAmount)) {
+			// Tokens were minted
+			transferredAssets[tokenId].minted = totalOutputAmount.minus(totalInputAmount);
+		} else if (totalInputAmount.isGreaterThan(totalOutputAmount)) {
+			// Tokens were burned
+			transferredAssets[tokenId].burned = totalInputAmount.minus(totalOutputAmount);
+		}
+
+		// Calculate transfers between different addresses
+		let transferredAmount = new BigNumber(0);
+
+		// For each address in outputs
+		outputsByAddress.forEach((outputAssets, address) => {
+			// Skip if this address doesn't have this token
+			if (!outputAssets.has(tokenId)) return;
+
+			// Get amounts for this token
+			const outputAmount = outputAssets.get(tokenId)!;
+			const inputAmount =
+				inputsByAddress.has(address) && inputsByAddress.get(address)!.has(tokenId)
+					? inputsByAddress.get(address)!.get(tokenId)!
+					: new BigNumber(0);
 
 			// Calculate amount received from other addresses
 			const receivedFromOthers = outputAmount.isGreaterThan(inputAmount)
 				? outputAmount.minus(inputAmount)
 				: new BigNumber(0);
 
-			if (receivedFromOthers.isGreaterThan(0)) {
-				if (!transferredAssets[tokenId]) {
-					transferredAssets[tokenId] = {
-						tokenId,
-						decimals: assetDecimals.get(tokenId) || 0,
-						amount: new BigNumber(0)
-					};
-				}
-				transferredAssets[tokenId].amount =
-					transferredAssets[tokenId].amount.plus(receivedFromOthers);
-			}
+			transferredAmount = transferredAmount.plus(receivedFromOthers);
 		});
+
+		// Account for minted tokens to avoid double counting
+		if (transferredAmount.isGreaterThan(0) && transferredAssets[tokenId].minted.isGreaterThan(0)) {
+			// Ensure we don't count minted tokens as transfers
+			transferredAmount = BigNumber.max(
+				transferredAmount.minus(transferredAssets[tokenId].minted),
+				new BigNumber(0)
+			);
+		}
+
+		transferredAssets[tokenId].amount = transferredAmount;
 	});
 
 	return transferredAssets;
