@@ -4,7 +4,7 @@
 	style="transition: all 0.5s ease;"
 >
 	<div class="nav-container relative flex items-center justify-between p-2 md:p-3">
-		<a target="_new" href="https://mewfinance.com" class="me-auto flex items-center gap-2">
+		<a href="/" class="me-auto flex items-center gap-2">
 			<img
 				class="relative h-[40px] md:h-[57px]"
 				src="https://ergexplorer.com/images/logo.png"

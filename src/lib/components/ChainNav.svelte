@@ -7,10 +7,11 @@
 	let container: Element;
 
 	const getNumBlocks = (width: number) => {
-		if (width < 420) return 2;
-		if (width < 640) return 3;
+		if (width < 290) return 1;
+		if (width < 450) return 2;
+		if (width < 620) return 3;
 		if (width < 800) return 4;
-		if (width < 1024) return 5;
+		if (width < 1150) return 5;
 		return 7;
 	};
 
@@ -30,26 +31,19 @@
 	<div class="flex items-center justify-center gap-8">
 		{#each Array(numBlocks) as _, i}
 			<div class="flex items-center">
-				<!-- Block -->
-				<div
-					class="flex h-15 w-15 items-center justify-center rounded-lg text-[0.6rem] {i ===
-					numBlocks - 1
-						? 'pulsing-box bg-primary text-gray-100'
-						: 'bg-gray-200 text-gray-900'} {numBlocks > 2
-						? 'md:h-18 md:w-18 md:text-[0.7rem]'
-						: ''}"
-				>
-					{nFormatter($nodeInfo.fullHeight - numBlocks + i + 2, 0, false)}
-				</div>
-
 				<!-- Connecting dots -->
-				{#if i < numBlocks - 1}
-					<div class="ms-7 flex gap-2">
-						{#if i === numBlocks - 2}
+				{#if i < numBlocks}
+					<div class="chain-box me-8 flex gap-2">
+						{#if i === numBlocks - 1}
 							<!-- Animated dots for the last connection -->
 							<div class="animated-dot bg-primary h-1.5 w-1.5 rounded-full"></div>
 							<div class="animated-dot bg-primary h-1.5 w-1.5 rounded-full"></div>
 							<div class="animated-dot bg-primary h-1.5 w-1.5 rounded-full"></div>
+						{:else if i === 0}
+							<!-- Static dots for other connections -->
+							<div class="h-1.5 w-1.5 rounded-full bg-gray-600"></div>
+							<div class="h-1.5 w-1.5 rounded-full bg-gray-500"></div>
+							<div class="h-1.5 w-1.5 rounded-full bg-gray-400"></div>
 						{:else}
 							<!-- Static dots for other connections -->
 							<div class="h-1.5 w-1.5 rounded-full bg-gray-400"></div>
@@ -58,6 +52,20 @@
 						{/if}
 					</div>
 				{/if}
+
+				<!-- Block -->
+				<a {...i == numBlocks - 1 && { href: '/mempool' }}>
+					<div
+						class="chain-box flex h-15 w-15 items-center justify-center rounded-lg text-[0.6rem] {i ===
+						numBlocks - 1
+							? 'pulsing-box bg-primary text-gray-100'
+							: 'bg-gray-200 text-gray-900'} {numBlocks > 2
+							? 'md:h-18 md:w-18 md:text-[0.7rem]'
+							: ''}"
+					>
+						{nFormatter($nodeInfo?.fullHeight - numBlocks + i + 2, 0, false)}
+					</div>
+				</a>
 			</div>
 		{/each}
 	</div>
@@ -100,5 +108,13 @@
 
 	.pulsing-box {
 		animation: pulse 1.15s infinite ease-out;
+	}
+
+	.chain-box {
+		transition: all 0.15s ease;
+	}
+
+	.chain-box:hover {
+		scale: 1.05;
 	}
 </style>

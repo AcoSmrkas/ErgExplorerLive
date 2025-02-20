@@ -3,6 +3,7 @@ import { writable, type Writable } from 'svelte/store';
 
 export const socket: Writable<Socket> = writable();
 export const nodeInfo: Writable<unknown> = writable();
+export const mempoolTxCount: Writable<number> = writable(0);
 export const mempoolTxs: Writable<Array<unknown>> = writable([]);
 export const tempBoxData: Writable<unknown> = writable({});
 export const assetInfos: Writable<unknown> = writable({

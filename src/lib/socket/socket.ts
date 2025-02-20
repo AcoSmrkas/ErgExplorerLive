@@ -1,6 +1,6 @@
 import { get } from 'svelte/store';
 import { io } from 'socket.io-client';
-import { socket, nodeInfo, mempoolTxs } from '$lib/store/store';
+import { socket, nodeInfo, mempoolTxs, mempoolTxCount } from '$lib/store/store';
 import { SOCKET_URL } from '$lib/common/const';
 import { getAssetInfos, getBoxInfos, collectTokenIds } from '$lib/common/utils';
 import { fetchingAssetData, fetchingBoxData } from '$lib/store/store';
@@ -37,6 +37,8 @@ export function initSocket() {
 				}[];
 			}[]
 		) => {
+			console.log('Socket on', 'mempoolTxs');
+
 			const isFetchingAssetData = get(fetchingAssetData);
 			const isFetchingBoxData = get(fetchingBoxData);
 
@@ -51,6 +53,9 @@ export function initSocket() {
 
 			const existingTxs = currentMempoolTxs.filter((tx) => newTxIds.has(tx.id));
 			const newTxs = transactions.filter((tx) => !currentTxIds.has(tx.id));
+			const allTxs = [...existingTxs, ...newTxs];
+console.log(allTxs.length);
+			mempoolTxCount.set(allTxs.length);
 
 			const allAssetIds: string[] = collectTokenIds(newTxs);
 			await getAssetInfos(allAssetIds);
@@ -62,9 +67,9 @@ export function initSocket() {
 				return [...inputBoxIds, ...outputBoxIds];
 			});
 
-			await getBoxInfos(allBoxIds);
+			await getBoxInfos(allBoxIds, transactions);
 
-			mempoolTxs.set([...existingTxs, ...newTxs]);
+			mempoolTxs.set(allTxs);
 		}
 	);
 

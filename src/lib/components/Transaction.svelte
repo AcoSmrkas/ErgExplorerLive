@@ -2,8 +2,7 @@
 	import { BigNumber } from 'bignumber.js';
 	import {
 		nFormatter,
-		getBoxDataById,
-		ergoTreeToAddress,
+		resolveTxBoxes,
 		trackNetAssetTransfers
 	} from '$lib/common/utils';
 	import { onMount } from 'svelte';
@@ -29,41 +28,37 @@
 	);
 
 	$effect(() => {
-		const proxyTx = JSON.parse(JSON.stringify(transaction));
-
-		for (let i = 0; i < proxyTx.outputs.length; i++) {
-			let output = proxyTx.outputs[i];
-
-			proxyTx.outputs[i].address = ergoTreeToAddress(output.ergoTree);
-		}
-
-		for (let i = 0; i < proxyTx.inputs.length; i++) {
-			let input = proxyTx.inputs[i];
-
-			const boxData = getBoxDataById(input.boxId);
-
-			if (boxData) {
-				proxyTx.inputs[i] = boxData;
-			}
-		}
-
-		thisTransaction = proxyTx;
-
 		setTimeout(updateAssets, 0);
 	});
 
 	function updateAssets() {
-		assets = trackNetAssetTransfers(thisTransaction);
+		const proxyTx = resolveTxBoxes(transaction);
+		
+		assets = {}
+		const uniqueAssets = trackNetAssetTransfers(proxyTx);
+		Object.values(uniqueAssets).forEach((item) => {
+			if (item.amount.toNumber() !== 0
+			|| item.burned.toNumber() !== 0
+			|| item.minted.toNumber() !== 0) {
+				assets[item.tokenId] = item;
+			}
+		});
+
+		console.log(proxyTx.id, Object.keys(assets).length);
+
+		thisTransaction = proxyTx;
 	}
 
 	onMount(async () => {
 		thisTransaction = JSON.parse(JSON.stringify(transaction));
+
+		
 	});
 </script>
 
 <a target="_new" href={`${ERGEXPLORER_URL}transactions/${thisTransaction.id}`}>
 	<div
-		class="tx-container flex flex-wrap place-content-around gap-y-7 rounded-md border-1 border-[#555] p-2"
+		class="tx-container flex flex-wrap place-content-around gap-y-7 rounded-md border-1 border-[#555] p-1"
 		out:fade|local={{ duration: 300 }}
 	>
 		{#if !showCoolBoxDetails}

@@ -133,6 +133,7 @@ export function trackNetAssetTransfers(thisTransaction: {
 	// Step 4: Calculate transfers between different addresses
 	const transferredAssets: {
 		[tokenId: string]: {
+			id: string;
 			tokenId: string;
 			decimals: number;
 			amount: BigNumber;
@@ -153,6 +154,7 @@ export function trackNetAssetTransfers(thisTransaction: {
 
 		// Initialize tracking for this token
 		transferredAssets[tokenId] = {
+			id: tokenId,
 			tokenId,
 			decimals: assetDecimals.get(tokenId) || 0,
 			amount: new BigNumber(0),
@@ -296,6 +298,26 @@ export function getBoxDataById(boxId: string) {
 	return box;
 }
 
+export function resolveBoxFromMempool(boxId: string, txs: Array<unknown>) {
+	const currentBoxData = get(tempBoxData) as unknown as { [key: string]: unknown };
+
+	let box = null;
+	for (const mTx of txs as { outputs: { boxId: string }[] }[]) {
+		const outputs = mTx.outputs;
+		for (const o of outputs) {
+			if (o.boxId == boxId) {
+				box = o;
+			}
+		}
+	}
+
+	if (box) {
+		currentBoxData[box.boxId] = box;
+
+		tempBoxData.set(currentBoxData);
+	}
+}
+
 export async function resolveBoxById(boxId: string) {
 	const currentBoxData = get(tempBoxData) as unknown as { [key: string]: unknown };
 	let box = null;
@@ -340,17 +362,19 @@ export function resolveTxBoxes(tx: unknown) {
 
 		if (boxData) {
 			proxyTx.inputs[i] = boxData;
+			proxyTx.inputs[i].address = ergoTreeToAddress(proxyTx.inputs[i].ergoTree);
 		}
 	}
 
 	return proxyTx;
 }
 
-export async function getBoxInfos(ids: Array<string>) {
+export async function getBoxInfos(ids: Array<string>, txs: Array<unknown>) {
 	if (ids.length === 0) return [];
 
 	fetchingBoxData.set(true);
-
+	
+	await Promise.all(ids.map((id) => resolveBoxFromMempool(id, txs)));
 	const result = await Promise.all(ids.map((id) => resolveBoxById(id)));
 
 	fetchingBoxData.set(false);

@@ -5,7 +5,6 @@
 	import ChainNav from '$lib/components/ChainNav.svelte';
 	import Navbar from '$lib/components/Navbar.svelte';
 	import TransactionsGrid from '$lib/components/TransactionsGrid.svelte';
-	import { goto } from '$app/navigation';
 
 	let blockHeight: number = $state(0);
 
@@ -13,8 +12,6 @@
 		const nodeInfoUnsubscribe = nodeInfo.subscribe(
 			(value: any) => (blockHeight = value.fullHeight)
 		);
-
-        goto('/mempool');
 
 		return () => {
 			if (nodeInfoUnsubscribe) {
@@ -28,6 +25,9 @@
 
 <div class="p-2">
 	<div class="mt-12 mb-2 ps-2 md:mt-17">
-		<h1>Welcome!</h1>
+		<p>Block height: {nFormatter(blockHeight, 0, false)}</p>
+		<p>Transactions in mempool: {nFormatter($mempoolTxCount, 0, false)}</p>
 	</div>
+
+	<TransactionsGrid />
 </div>

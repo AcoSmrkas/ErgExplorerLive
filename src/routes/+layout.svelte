@@ -3,6 +3,7 @@
 	import { onMount } from 'svelte';
 	import { socket } from '$lib/store/store';
 	import { initSocket } from '$lib/socket/socket';
+	import ChainNav from '$lib/components/ChainNav.svelte';
 	import Loading from '$lib/components/Loading.svelte';
 	import type { Socket } from 'socket.io-client';
 
@@ -24,6 +25,8 @@
 
 {#if socketConnected}
 	{@render children()}
+
+	<ChainNav />
 {:else}
 	<Loading />
 {/if}
