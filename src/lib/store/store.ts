@@ -1,6 +1,7 @@
 import type { Socket } from 'socket.io-client';
 import { writable, type Writable } from 'svelte/store';
 
+export const ready: Writable<boolean> = writable(false);
 export const socket: Writable<Socket> = writable();
 export const nodeInfo: Writable<unknown> = writable();
 export const mempoolTxCount: Writable<number> = writable(0);

@@ -1,10 +1,6 @@
 <script lang="ts">
 	import { BigNumber } from 'bignumber.js';
-	import {
-		nFormatter,
-		resolveTxBoxes,
-		trackNetAssetTransfers
-	} from '$lib/common/utils';
+	import { nFormatter, resolveTxBoxes, trackNetAssetTransfers } from '$lib/common/utils';
 	import { onMount } from 'svelte';
 	import Box from '$lib/components/Box.svelte';
 	import Asset from './Asset.svelte';
@@ -33,13 +29,15 @@
 
 	function updateAssets() {
 		const proxyTx = resolveTxBoxes(transaction);
-		
-		assets = {}
+
+		assets = {};
 		const uniqueAssets = trackNetAssetTransfers(proxyTx);
 		Object.values(uniqueAssets).forEach((item) => {
-			if (item.amount.toNumber() !== 0
-			|| item.burned.toNumber() !== 0
-			|| item.minted.toNumber() !== 0) {
+			if (
+				item.amount.toNumber() !== 0 ||
+				item.burned.toNumber() !== 0 ||
+				item.minted.toNumber() !== 0
+			) {
 				assets[item.tokenId] = item;
 			}
 		});
@@ -51,8 +49,6 @@
 
 	onMount(async () => {
 		thisTransaction = JSON.parse(JSON.stringify(transaction));
-
-		
 	});
 </script>
 

@@ -327,7 +327,6 @@ export async function resolveBoxById(boxId: string) {
 	}
 
 	try {
-		console.log('Fetching data for box', boxId);
 		const boxData = await axios.get(`${EXPLORER_API}boxes/${boxId}`);
 
 		if (boxData.data) {
@@ -373,7 +372,7 @@ export async function getBoxInfos(ids: Array<string>, txs: Array<unknown>) {
 	if (ids.length === 0) return [];
 
 	fetchingBoxData.set(true);
-	
+
 	await Promise.all(ids.map((id) => resolveBoxFromMempool(id, txs)));
 	const result = await Promise.all(ids.map((id) => resolveBoxById(id)));
 

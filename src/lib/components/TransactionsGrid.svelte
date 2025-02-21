@@ -1,6 +1,7 @@
 <script lang="ts">
+	import Loading from './Loading.svelte';
 	import Transaction from '$lib/components/Transaction.svelte';
-	import { mempoolTxs } from '$lib/store/store';
+	import { mempoolTxs, ready } from '$lib/store/store';
 	import { trackNetAssetTransfers, resolveTxBoxes } from '$lib/common/utils';
 	import { onMount } from 'svelte';
 
@@ -22,425 +23,8 @@
 	];
 	let items = $state([]);
 
-	let mockTransactions: any = {};
-	mockTransactions['123'] = {
-		id: '123',
-		inputs: [
-			{
-				value: 1,
-				address: '123',
-				assets: [
-					{
-						tokenId: '123',
-						decimals: 2,
-						amount: 1
-					}
-				]
-			}
-		],
-		outputs: [
-			{
-				value: 1000000000000,
-				ergoTree: '0008cd03c59160fe57f73399d829835398712bfa5681d8708e8e3b29a197205808af8548',
-				assets: [
-					{
-						tokenId: '123',
-						decimals: 2,
-						amount: 1
-					}
-				]
-			}
-		]
-	};
-	mockTransactions['232'] = {
-		id: '232',
-		inputs: [
-			{
-				value: 1,
-				address: '232',
-				assets: [
-					{
-						tokenId: '232',
-						decimals: 2,
-						amount: 1
-					}
-				]
-			}
-		],
-		outputs: [
-			{
-				value: 10000000000,
-				ergoTree: '0008cd03c59160fe57f73399d829835398712bfa5681d8708e8e3b29a197205808af8548',
-				assets: [
-					{
-						tokenId: '232',
-						decimals: 2,
-						amount: 1
-					}
-				]
-			}
-		]
-	};
-
-	mockTransactions['7211'] = {
-		id: '7211',
-		inputs: [
-			{
-				value: 1,
-				address: '7211',
-				assets: [
-					{
-						tokenId: '7211',
-						decimals: 2,
-						amount: 1
-					}
-				]
-			}
-		],
-		outputs: [
-			{
-				value: 10000000000,
-				ergoTree: '0008cd03c59160fe57f73399d829835398712bfa5681d8708e8e3b29a197205808af8548',
-				assets: [
-					{
-						tokenId: '7211',
-						decimals: 2,
-						amount: 1
-					}
-				]
-			}
-		]
-	};
-	mockTransactions['72111'] = {
-		id: '72111',
-		inputs: [
-			{
-				value: 1,
-				address: '72111',
-				assets: [
-					{
-						tokenId: '72111',
-						decimals: 2,
-						amount: 1
-					}
-				]
-			}
-		],
-		outputs: [
-			{
-				value: 10000000000,
-				ergoTree: '0008cd03c59160fe57f73399d829835398712bfa5681d8708e8e3b29a197205808af8548',
-				assets: [
-					{
-						tokenId: '72111',
-						decimals: 2,
-						amount: 1
-					}
-				]
-			}
-		]
-	};
-
-	mockTransactions['72'] = {
-		id: '72',
-		inputs: [
-			{
-				value: 1,
-				address: '72',
-				assets: [
-					{
-						tokenId: '72',
-						decimals: 2,
-						amount: 1
-					}
-				]
-			}
-		],
-		outputs: [
-			{
-				value: 10000000000,
-				ergoTree: '0008cd03c59160fe57f73399d829835398712bfa5681d8708e8e3b29a197205808af8548',
-				assets: [
-					{
-						tokenId: '72',
-						decimals: 2,
-						amount: 1
-					}
-				]
-			}
-		]
-	};
-
-	mockTransactions['77'] = {
-		id: '77',
-		inputs: [
-			{
-				value: 1,
-				address: '77',
-				assets: [
-					{
-						tokenId: '77',
-						decimals: 2,
-						amount: 1
-					}
-				]
-			}
-		],
-		outputs: [
-			{
-				value: 10000000000,
-				ergoTree: '0008cd03c59160fe57f73399d829835398712bfa5681d8708e8e3b29a197205808af8548',
-				assets: []
-			}
-		]
-	};
-
-	mockTransactions['9'] = {
-		id: '9',
-		inputs: [
-			{
-				value: 1,
-				address: '9',
-				assets: [
-					{
-						tokenId: '9',
-						decimals: 2,
-						amount: 1
-					}
-				]
-			}
-		],
-		outputs: [
-			{
-				value: 10000000000,
-				ergoTree: '0008cd03c59160fe57f73399d829835398712bfa5681d8708e8e3b29a197205808af8548',
-				assets: []
-			}
-		]
-	};
-
-	mockTransactions['2'] = {
-		id: '2',
-		inputs: [
-			{
-				value: 1,
-				address: '2',
-				assets: [
-					{
-						tokenId: '2',
-						decimals: 2,
-						amount: 1
-					}
-				]
-			}
-		],
-		outputs: [
-			{
-				value: 10000000000,
-				ergoTree: '0008cd03c59160fe57f73399d829835398712bfa5681d8708e8e3b29a197205808af8548',
-				assets: []
-			}
-		]
-	};
-
-	mockTransactions['1'] = {
-		id: '1',
-		inputs: [
-			{
-				value: 1,
-				address: '1',
-				assets: [
-					{
-						tokenId: '1',
-						decimals: 2,
-						amount: 1
-					}
-				]
-			}
-		],
-		outputs: [
-			{
-				value: 10000000000,
-				ergoTree: '0008cd03c59160fe57f73399d829835398712bfa5681d8708e8e3b29a197205808af8548',
-				assets: []
-			}
-		]
-	};
-
-	mockTransactions['6222233'] = {
-		id: '6222233',
-		inputs: [
-			{
-				value: 1,
-				address: '6222233',
-				assets: [
-					{
-						tokenId: '6222233',
-						decimals: 2,
-						amount: 1
-					}
-				]
-			}
-		],
-		outputs: [
-			{
-				value: 10000000000,
-				ergoTree: '0008cd03c59160fe57f73399d829835398712bfa5681d8708e8e3b29a197205808af8548',
-				assets: [
-					{
-						tokenId: '6222233',
-						decimals: 2,
-						amount: 1
-					},
-					{
-						tokenId: '622223223',
-						decimals: 2,
-						amount: 1
-					}
-				]
-			}
-		]
-	};
-
-	mockTransactions['62'] = {
-		id: '62',
-		inputs: [
-			{
-				value: 1,
-				address: '62',
-				assets: [
-					{
-						tokenId: '62',
-						decimals: 2,
-						amount: 1
-					}
-				]
-			}
-		],
-		outputs: [
-			{
-				value: 10000000000,
-				ergoTree: '0008cd03c59160fe57f73399d829835398712bfa5681d8708e8e3b29a197205808af8548',
-				assets: [
-					{
-						tokenId: '62',
-						decimals: 2,
-						amount: 1
-					}
-				]
-			}
-		]
-	};
-
-	mockTransactions['453'] = {
-		id: '453',
-		inputs: [
-			{
-				value: 1,
-				address: '453',
-				assets: [
-					{
-						tokenId: '453',
-						decimals: 2,
-						amount: 1
-					}
-				]
-			}
-		],
-		outputs: [
-			{
-				value: 10000000000,
-				ergoTree: '0008cd03c59160fe57f73399d829835398712bfa5681d8708e8e3b29a197205808af8548',
-				assets: [
-					{
-						tokenId: '453',
-						decimals: 2,
-						amount: 1
-					},
-					{
-						tokenId: '3',
-						decimals: 2,
-						amount: 1
-					},
-					{
-						tokenId: '1',
-						decimals: 2,
-						amount: 1
-					},
-					{
-						tokenId: '13',
-						decimals: 2,
-						amount: 1
-					}
-				]
-			}
-		]
-	};
-
-	mockTransactions['443'] = {
-		id: '443',
-		inputs: [
-			{
-				value: 1,
-				address: '443',
-				assets: [
-					{
-						tokenId: '443',
-						decimals: 2,
-						amount: 1
-					}
-				]
-			}
-		],
-		outputs: [
-			{
-				value: 10000000000,
-				ergoTree: '0008cd03c59160fe57f73399d829835398712bfa5681d8708e8e3b29a197205808af8548',
-				assets: [
-					{
-						tokenId: '443',
-						decimals: 2,
-						amount: 1
-					},
-					{
-						tokenId: '3',
-						decimals: 2,
-						amount: 1
-					},
-					{
-						tokenId: '1',
-						decimals: 2,
-						amount: 1
-					},
-					{
-						tokenId: '13',
-						decimals: 2,
-						amount: 1
-					}
-				]
-			}
-		]
-	};
-	const mockTxKeys = Object.keys(mockTransactions);
-
-	function handleKeydown(event) {
-		if (event.key === 'd') {
-			const tkeys = Object.keys(transactions);
-			const key = mockTxKeys[tkeys.length];
-			transactions[key] = mockTransactions[key];
-		}
-
-		if (event.key === 'a') {
-			const tkeys = Object.keys(transactions);
-			const key = mockTxKeys[tkeys.length - 1];
-			delete transactions[key];
-		}
-	}
-
 	onMount(() => {
 		container = document.getElementById('grid-container');
-
-		window.addEventListener('keydown', handleKeydown);
 
 		const mempoolTxsUnsubscribe = mempoolTxs.subscribe((value: any) => {
 			transactions = value;
@@ -458,7 +42,6 @@
 		return () => {
 			resizeObserver.disconnect();
 			mempoolTxsUnsubscribe();
-			window.removeEventListener('keydown', handleKeydown);
 		};
 	});
 
@@ -480,13 +63,14 @@
 		const layout = new Array(Object.keys(transactions).length).fill(null).map(function (item, i) {
 			const tx = transactions[Number(Object.keys(transactions)[i])];
 			const proxyTx = resolveTxBoxes(tx);
-			
+
 			const uniqueAssets = trackNetAssetTransfers(proxyTx);
-			const assetCount = Object.values(uniqueAssets).filter((item) =>
-			item.amount.toNumber() !== 0
-			|| item.burned.toNumber() !== 0
-			|| item.minted.toNumber() !== 0
-		).length;
+			const assetCount = Object.values(uniqueAssets).filter(
+				(item) =>
+					item.amount.toNumber() !== 0 ||
+					item.burned.toNumber() !== 0 ||
+					item.minted.toNumber() !== 0
+			).length;
 
 			const maxX = col > 4 ? 4 : col;
 			const calculatedH = Math.ceil(assetCount / 4);
@@ -569,7 +153,11 @@
 </script>
 
 <div id="grid-container" class="h-[69vh] max-h-[69vh] overflow-y-scroll">
-	<Grid bind:items gap={[6, 6]} rowHeight={130} let:item let:dataItem {cols} fillSpace={true}>
-		<Transaction transaction={dataItem.data} />
-	</Grid>
+	{#if $ready}
+		<Grid bind:items gap={[6, 6]} rowHeight={130} let:item let:dataItem {cols} fillSpace={true}>
+			<Transaction transaction={dataItem.data} />
+		</Grid>
+	{:else}
+		<Loading height={'full'} />
+	{/if}
 </div>

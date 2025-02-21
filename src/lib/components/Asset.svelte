@@ -60,7 +60,13 @@
 	});
 </script>
 
-<div class="bg-form m-1 flex flex-col gap-1 rounded-sm p-2 pb-1 {type == 'burn' ? 'border-1 border-red-500' : type == 'mint' ? 'border-1 border-green-500' : ''}">
+<div
+	class="bg-form m-1 flex flex-col gap-1 rounded-sm p-2 pb-1 {type == 'burn'
+		? 'border-1 border-red-500'
+		: type == 'mint'
+			? 'border-1 border-green-500'
+			: ''}"
+>
 	<a target="_new" {...link && { href: link }}>
 		<div class="align-center flex h-15 w-15 justify-center">
 			{#if imageUrl}
@@ -71,7 +77,9 @@
 					title={name}
 				/>
 			{:else}
-				<p title={name} class="h-15 w-15 overflow-hidden text-center text-sm text-ellipsis">{name}</p>
+				<p title={name} class="text-dynamic h-15 w-15 overflow-hidden text-center text-ellipsis">
+					{name}
+				</p>
 			{/if}
 		</div>
 		<p class="text-center text-sm">
@@ -79,3 +87,9 @@
 		</p>
 	</a>
 </div>
+
+<style>
+	.text-dynamic {
+	  font-size: clamp(0.5em, 2.5vw, 0.65em);
+	}
+</style>

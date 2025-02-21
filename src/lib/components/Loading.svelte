@@ -1,8 +1,10 @@
 <script>
 	import { fade } from 'svelte/transition';
+
+	let { height } = $props();
 </script>
 
-<div class="holder" out:fade|local={{ duration: 200 }}>
+<div class="holder h-{height}" out:fade|local={{ duration: 200 }}>
 	<div class="image-container">
 		<div class="loading-spinner"></div>
 		<img src="https://ergexplorer.com/images/logo.png" alt="Logo" class="round-image" />
@@ -12,7 +14,6 @@
 <style>
 	.holder {
 		margin: 0;
-		height: 100vh;
 		display: flex;
 		justify-content: center;
 		align-items: center;

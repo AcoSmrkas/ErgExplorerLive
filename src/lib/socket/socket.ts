@@ -1,8 +1,8 @@
 import { get } from 'svelte/store';
 import { io } from 'socket.io-client';
-import { socket, nodeInfo, mempoolTxs, mempoolTxCount } from '$lib/store/store';
+import { socket, nodeInfo, mempoolTxs, mempoolTxCount, ready } from '$lib/store/store';
 import { SOCKET_URL } from '$lib/common/const';
-import { getAssetInfos, getBoxInfos, collectTokenIds } from '$lib/common/utils';
+import { getAssetInfos, getBoxInfos, collectTokenIds, resolveTxBoxes } from '$lib/common/utils';
 import { fetchingAssetData, fetchingBoxData } from '$lib/store/store';
 
 export function initSocket() {
@@ -53,14 +53,12 @@ export function initSocket() {
 
 			const existingTxs = currentMempoolTxs.filter((tx) => newTxIds.has(tx.id));
 			const newTxs = transactions.filter((tx) => !currentTxIds.has(tx.id));
+
 			const allTxs = [...existingTxs, ...newTxs];
-console.log(allTxs.length);
+
 			mempoolTxCount.set(allTxs.length);
 
-			const allAssetIds: string[] = collectTokenIds(newTxs);
-			await getAssetInfos(allAssetIds);
-
-			const allBoxIds = transactions.flatMap((transaction) => {
+			const allBoxIds = newTxs.flatMap((transaction) => {
 				const inputBoxIds = transaction.inputs?.map((input) => input.boxId) || [];
 				const outputBoxIds = transaction.outputs?.map((output) => output.boxId) || [];
 
@@ -68,6 +66,15 @@ console.log(allTxs.length);
 			});
 
 			await getBoxInfos(allBoxIds, transactions);
+
+			for (let i = 0; i < newTxs.length; i++) {
+				newTxs[i] = await resolveTxBoxes(newTxs[i]);
+			}
+
+			const allAssetIds: string[] = collectTokenIds(newTxs);
+			await getAssetInfos(allAssetIds);
+
+			ready.set(true);
 
 			mempoolTxs.set(allTxs);
 		}

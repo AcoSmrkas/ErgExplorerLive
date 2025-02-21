@@ -3,7 +3,7 @@
 	import { onMount } from 'svelte';
 	import { nFormatter } from '$lib/common/utils';
 
-	let containerWidth: number = 0;
+	let containerWidth: number = $state(0);
 	let container: Element;
 
 	const getNumBlocks = (width: number) => {
@@ -15,7 +15,7 @@
 		return 7;
 	};
 
-	$: numBlocks = getNumBlocks(containerWidth);
+	let numBlocks = $derived(getNumBlocks(containerWidth));
 
 	onMount(() => {
 		const resizeObserver = new ResizeObserver((entries) => {
