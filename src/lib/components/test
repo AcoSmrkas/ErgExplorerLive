@@ -1,0 +1,287 @@
+<script lang="ts">
+    import { BigNumber } from 'bignumber.js';
+    import { nFormatter, resolveTxBoxes, trackNetAssetTransfers } from '$lib/common/utils';
+    import { onMount } from 'svelte';
+    import Box from '$lib/components/Box.svelte';
+    import Asset from './Asset.svelte';
+    import SmallLoading from '$lib/components/SmallLoading.svelte';
+    import ErgExplorerLink from './ErgExplorerLink.svelte';
+    import { fade } from 'svelte/transition';
+    import { ERGEXPLORER_URL } from '$lib/common/const';
+
+    // Constants
+    const PAGE_SIZE = 30;
+    const EXCLUDED_LABELS = ["Ergo Platform (Miner Fee)"];
+
+    // Special transaction configurations
+    const SPECIAL_CONFIG = {
+        MIXERS: {
+            tokens: ['1a6a8c16e4b1cc9d73d03183565cfb8e79dd84198cb66beeed7d3463e0da2b98'],
+            label: 'Mixer',
+            style: 'bg-purple-500/70'
+        },
+        SIGUSD_ORACLE: {
+            addresses: ['AucEQEJ3Y5Uhmu4o8dsrHy28nRTgX5sVtXvjpMTqdMQzBR3uRVcvCFbv7SeGuPhQ16AXBP7XWdMShDdhRy4cayZgxHSkdAVuTiZRvj6WCfmhXJ4LY2E46CytRAnkiYubCdEroUUX2niMLhjNmDUn4KmXWSrKngrfGwHSaD8RJUMEp5AGADaChRU6kAnh9nstkDN3'],
+            tokens: ['011d3364de07e5a26f0c4eef0852cddb387039a921b7154ef3cab22c6eda887f'],
+            label: 'SigUSD Oracle',
+            style: 'bg-blue-500/70'
+        },
+        // ... other special configs
+    };
+
+    let { transaction } = $props();
+    let thisTransaction: any = $state({});
+    let showBoxDetails = $state(false);
+    let showCoolBoxDetails = $state(true);
+    let assets: { [key: string]: { tokenId: string; decimals: number; amount: any; name?: string } } = $state({});
+    let txLabels: Array<{label: string, style: string}> = $state([]);
+    let addressBook = $state(new Map());
+
+    let totalValue: BigNumber = $derived(
+        transaction.outputs.reduce(
+            (total: BigNumber, output: any) => total.plus(output.value),
+            new BigNumber(0)
+        )
+    );
+
+    function getStyleForType(type: string): string {
+        const styleMap = {
+            'Mining pool': 'bg-orange-500/30',
+            'Service': 'bg-teal-500/30',
+            'Exchange': 'bg-pink-500/30',
+            'Whale': 'bg-slate-500/30',
+            'Game': 'bg-emerald-500/30',
+            'Treasury': 'bg-violet-500/30',
+            'Oracle': 'bg-amber-500/30',
+            'default': 'bg-gray-500/30'
+        };
+        return styleMap[type] || styleMap.default;
+    }
+
+    async function fetchAddressBookPage(offset: number): Promise<any> {
+        try {
+            const response = await fetch(
+                `https://api.ergexplorer.com/addressbook/getAddresses?offset=${offset}&limit=${PAGE_SIZE}&type=all&order=nameAsc&testnet=0`
+            );
+            return await response.json();
+        } catch (error) {
+            console.error(`Error fetching address book page at offset ${offset}:`, error);
+            return null;
+        }
+    }
+
+    async function fetchAddressBook() {
+        try {
+            const newAddressBook = new Map();
+            let offset = 0;
+            let hasMore = true;
+
+            while (hasMore) {
+                const data = await fetchAddressBookPage(offset);
+                
+                if (!data || !data.items || data.items.length === 0) {
+                    hasMore = false;
+                    continue;
+                }
+
+                data.items.forEach(item => {
+                    newAddressBook.set(item.address, {
+                        name: item.name,
+                        type: item.type,
+                        urltype: item.urltype
+                    });
+                });
+
+                if (data.items.length < PAGE_SIZE) {
+                    hasMore = false;
+                }
+
+                offset += PAGE_SIZE;
+            }
+
+            addressBook = newAddressBook;
+            
+        } catch (error) {
+            console.error('Error fetching complete address book:', error);
+        }
+    }
+
+    function checkForSpecialTokens(tx: any, tokenList: string[], requireBothInputOutput = false) {
+        return tokenList.some(tokenId => {
+            const hasInInputs = tx.inputs.some(input => 
+                input.assets?.some(asset => asset.tokenId === tokenId)
+            );
+            const hasInOutputs = tx.outputs.some(output => 
+                output.assets?.some(asset => asset.tokenId === tokenId)
+            );
+            return requireBothInputOutput ? (hasInInputs && hasInOutputs) : (hasInInputs || hasInOutputs);
+        });
+    }
+
+    function checkForSpecialAddress(tx: any, addressList: string[]) {
+        return addressList.some(address => {
+            const isInInputs = tx.inputs.some(input => input.address === address);
+            const isInOutputs = tx.outputs.some(output => output.address === address);
+            return isInInputs || isInOutputs;
+        });
+    }
+
+    function determineAddressBookLabels(tx: any) {
+        const labels = new Set();
+        const seenAddresses = new Set();
+        
+        [...tx.inputs, ...tx.outputs].forEach(box => {
+            if (!seenAddresses.has(box.address)) {
+                seenAddresses.add(box.address);
+                const addressInfo = addressBook.get(box.address);
+                
+                if (addressInfo) {
+                    const label = addressInfo.urltype ? 
+                        `${addressInfo.name} (${addressInfo.urltype})` : 
+                        addressInfo.name;
+                    
+                    if (!EXCLUDED_LABELS.includes(label)) {
+                        labels.add({
+                            label,
+                            style: getStyleForType(addressInfo.type)
+                        });
+                    }
+                }
+            }
+        });
+        
+        return Array.from(labels);
+    }
+
+    function determineTransactionLabels(tx: any) {
+        const labels = [];
+        
+        Object.entries(SPECIAL_CONFIG).forEach(([key, config]) => {
+            let shouldAdd = false;
+            
+            if (config.tokens && checkForSpecialTokens(tx, config.tokens, key === 'MIXERS')) {
+                shouldAdd = true;
+            }
+            
+            if (config.addresses && checkForSpecialAddress(tx, config.addresses)) {
+                shouldAdd = true;
+            }
+            
+            if (shouldAdd) {
+                labels.push({
+                    label: config.label,
+                    style: config.style
+                });
+            }
+        });
+        
+        const addressBookLabels = determineAddressBookLabels(tx);
+        labels.push(...addressBookLabels);
+        
+        return labels;
+    }
+
+    function updateAssets() {
+        const proxyTx = resolveTxBoxes(transaction);
+        txLabels = determineTransactionLabels(proxyTx);
+
+        assets = {};
+        const uniqueAssets = trackNetAssetTransfers(proxyTx);
+        Object.values(uniqueAssets).forEach((item) => {
+            if (
+                item.amount.toNumber() !== 0 ||
+                item.burned.toNumber() !== 0 ||
+                item.minted.toNumber() !== 0
+            ) {
+                assets[item.tokenId] = item;
+            }
+        });
+
+        console.log(proxyTx.id, Object.keys(assets).length);
+        thisTransaction = proxyTx;
+    }
+
+    $effect(() => {
+        setTimeout(updateAssets, 0);
+    });
+
+    onMount(async () => {
+        await fetchAddressBook();
+        thisTransaction = JSON.parse(JSON.stringify(transaction));
+    });
+</script>
+<a target="_new" href={`${ERGEXPLORER_URL}transactions/${thisTransaction.id}`} class="block w-full h-full">
+    <div
+        class="h-full bg-[#1a1a1a] rounded-lg hover:bg-[#252525] transition-colors flex flex-col"
+        out:fade|local={{ duration: 300 }}
+    >
+        <!-- Label Header -->
+        {#if txLabels.length > 0}
+            <div class="w-full {txLabels[0].style} text-xs font-medium px-3 py-1">
+                {txLabels[0].label}
+            </div>
+        {:else}
+            <div class="w-full bg-[#2a2a2a] text-xs font-medium px-3 py-1">
+                P2P
+            </div>
+        {/if}
+
+        {#if !showCoolBoxDetails}
+            <div class="p-3 flex-1">
+                <p class="text-gray-300">ID: <ErgExplorerLink type="transactions" value={thisTransaction.id} /></p>
+                <div class="flex mt-2">
+                    <span class="text-gray-300">
+                        Total value: {nFormatter(totalValue.dividedBy(10 ** 9).toNumber())}
+                        <span class="text-primary font-bold">ERG</span>
+                    </span>
+                    <button 
+                        class="ms-auto text-gray-400 hover:text-white" 
+                        onclick={() => (showBoxDetails = !showBoxDetails)}
+                    >
+                        Show Details
+                    </button>
+                </div>
+
+                {#if showBoxDetails}
+                    <div class="mt-4">
+                        <p class="text-gray-300">Inputs:</p>
+                        {#each thisTransaction.inputs as box}
+                            <Box {box} />
+                        {/each}
+
+                        <p class="text-gray-300 mt-4">Outputs:</p>
+                        {#each thisTransaction.outputs as box}
+                            <Box {box} />
+                        {/each}
+                    </div>
+                {/if}
+            </div>
+        {:else if Object.keys(assets).length > 0}
+            <div class="p-2 space-y-2 flex-1 overflow-hidden">
+                {#each Object.entries(assets) as [tokenId, asset]}
+                    <Asset 
+                        {asset} 
+                        tokenUrl={`${ERGEXPLORER_URL}token/${tokenId}`}
+                        isOnlyAsset={Object.keys(assets).length === 1}
+                    />
+                {/each}
+            </div>
+        {:else}
+            <div class="p-4 flex justify-center flex-1">
+                <SmallLoading />
+            </div>
+        {/if}
+    </div>
+</a>
+
+<style>
+:global(.svlt-grid-item) {
+    width: 100% !important;
+    height: 100% !important;
+}
+
+:global(.asset-card) {
+    height: 100%;
+    width: 100%;
+}
+</style>

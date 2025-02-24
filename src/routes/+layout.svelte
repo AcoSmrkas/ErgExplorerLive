@@ -7,6 +7,7 @@
 	import Navbar from '$lib/components/Navbar.svelte';
 	import Loading from '$lib/components/Loading.svelte';
 	import type { Socket } from 'socket.io-client';
+	import CombinedNav from '$lib/components/CombinedNav.svelte';
 
 	let { children } = $props();
 	let socketConnected = $state(false);
@@ -29,7 +30,7 @@
 
 	{@render children()}
 
-	<ChainNav />
+	<CombinedNav />
 {:else}
 	<Loading height={'[100vh]'} />
 {/if}
