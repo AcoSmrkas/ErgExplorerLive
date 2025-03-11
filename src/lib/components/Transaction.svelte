@@ -46,6 +46,13 @@
             style: 'bg-green-500/70',
             sound: 'dex'
         },
+        DUCKPOOL_BORROW: {
+            tokens: ['272a4aeba6d1596ee0405b13fa223074077fd31f2d519fcd2f7b1656596db029'],
+            label: 'Babel fee ',
+            style: 'bg-green-500/70',
+            sound: 'dex'
+        },
+        
         DUCKPOOL_RSADA: {
             tokens: ["35f826497f8eadf5b46f768485cec175c35c11360b4821ea92bbbe855777b55c"],
             label: 'Duckpool rsADA',

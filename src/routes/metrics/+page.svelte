@@ -9,7 +9,30 @@
         <h1 class="text-2xl font-bold mb-2">Transaction Metrics Dashboard</h1>
         <p class="text-gray-400">Analyze your blockchain transaction patterns over time</p>
     </header>
-    
+    <!-- Add this to your MetricsDashboard.svelte -->
+<div class="bg-[#1e1e1e] rounded-lg p-4 mt-4">
+    <h3 class="text-sm font-medium mb-2 text-gray-400">Database Contents</h3>
+    <div class="max-h-48 overflow-y-auto">
+      <table class="w-full">
+        <thead>
+          <tr>
+            <th class="p-1 text-left">Date</th>
+            <th class="p-1 text-right">Transactions</th>
+            <th class="p-1 text-left">Labels</th>
+          </tr>
+        </thead>
+        <tbody>
+          {#each metricsData as day}
+            <tr class="border-b border-[#333]">
+              <td class="p-1">{day.date}</td>
+              <td class="p-1 text-right">{day.totalTransactions}</td>
+              <td class="p-1">{day.labels.length} labels</td>
+            </tr>
+          {/each}
+        </tbody>
+      </table>
+    </div>
+  </div>
     <MetricsDashboard />
     
     <div class="mt-8 text-center">

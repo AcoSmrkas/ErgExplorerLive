@@ -1,9 +1,9 @@
-<!-- DailyTxTracker.svelte (With Metrics Integration) -->
+<!-- DailyTxTracker.svelte -->
 <script lang="ts">
     import { onMount } from 'svelte';
     import { fly } from 'svelte/transition';
     import { ChevronRight, ChevronLeft, Download, BarChart } from 'lucide-svelte';
-    import { metricsService } from '$lib/utils/MetricsService';
+    import { metricsService, metrics } from '$lib/utils/IndexedDBMetricsService';
 
     // Interface for label tracking
     interface LabelCount {
@@ -103,7 +103,6 @@
     // Navigate to metrics dashboard
     function goToMetricsDashboard() {
         window.location.href = '/metrics';
-        // You would need to create this page in your app
     }
 
     // Extract color from style class
@@ -123,7 +122,7 @@
         return colorMap[styleClass] || '#6b7280';
     }
 
-    // Persist label counts in localStorage
+    // Persist label counts in localStorage for current day access
     $effect(() => {
         if (labelCounts.length > 0) {
             try {
@@ -131,7 +130,7 @@
                     date: currentDate.toISOString(),
                     counts: labelCounts
                 }));
-                console.log('💾 Saved label counts to localStorage');
+                console.log('💾 Saved today\'s label counts to localStorage');
                 
                 // Also save to metrics service
                 saveToMetrics();
@@ -161,7 +160,7 @@
                 if (storedDate.toDateString() === new Date().toDateString()) {
                     labelCounts = counts;
                     currentDate = storedDate;
-                    console.log('📥 Loaded previous day\'s counts');
+                    console.log('📥 Loaded today\'s counts from localStorage');
                 }
             }
         } catch (error) {
@@ -309,6 +308,7 @@
                             <span class="text-sm text-gray-300">Export as CSV</span>
                             <Download size={16} class="text-gray-400" />
                         </button>
+                        
                         <button 
                             class="w-full flex items-center justify-between p-2 rounded bg-[#333] hover:bg-[#444] transition-colors"
                             on:click={goToMetricsDashboard}

@@ -12,6 +12,9 @@ const initialState = {
 // Create a Svelte store for metrics
 const metricsStore = writable(initialState);
 
+// Add debounce timer
+let saveDebounceTimer = null;
+
 // Service to handle metrics data
 class MetricsService {
   constructor() {
@@ -111,35 +114,69 @@ class MetricsService {
   }
 
   /**
-   * Save metrics to file
+   * Helper method to load current file data without updating store
    */
-  async saveToFile(data) {
+  async loadCurrentFileData() {
     try {
-      const response = await fetch(`${this.API_ENDPOINT}/save`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(data)
-      });
+      const response = await fetch(`${this.API_ENDPOINT}/load`);
       
       if (!response.ok) {
-        throw new Error(`Failed to save metrics: ${response.statusText}`);
+        return [];
       }
       
-      this.debug('Saved metrics data to file', { count: data.length });
+      return await response.json();
     } catch (error) {
-      console.error('❌ Error saving metrics data:', error);
-      metricsStore.update(state => ({
-        ...state,
-        error: 'Failed to save metrics data: ' + (error.message || 'Unknown error')
-      }));
-      
-      // Fallback to localStorage if saving to file fails
-      if (browser) {
-        this.saveToLocalStorage(data);
-      }
+      console.error('Error checking current file data:', error);
+      return [];
     }
+  }
+
+  /**
+   * Save metrics to file with debouncing and change detection
+   */
+  async saveToFile(data) {
+    // Clear any pending save operation
+    if (saveDebounceTimer) {
+      clearTimeout(saveDebounceTimer);
+    }
+    
+    // Set a debounce timer to prevent rapid saves
+    saveDebounceTimer = setTimeout(async () => {
+      try {
+        // Compare with current data before saving
+        const currentData = await this.loadCurrentFileData();
+        
+        // Only save if there's an actual change
+        if (JSON.stringify(currentData) !== JSON.stringify(data)) {
+          const response = await fetch(`${this.API_ENDPOINT}/save`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(data)
+          });
+          
+          if (!response.ok) {
+            throw new Error(`Failed to save metrics: ${response.statusText}`);
+          }
+          
+          this.debug('Saved metrics data to file', { count: data.length });
+        } else {
+          this.debug('Skipped saving metrics (no changes)');
+        }
+      } catch (error) {
+        console.error('❌ Error saving metrics data:', error);
+        metricsStore.update(state => ({
+          ...state,
+          error: 'Failed to save metrics data: ' + (error.message || 'Unknown error')
+        }));
+        
+        // Fallback to localStorage if saving to file fails
+        if (browser) {
+          this.saveToLocalStorage(data);
+        }
+      }
+    }, 1000); // Delay saves by 1 second
   }
   
   /**

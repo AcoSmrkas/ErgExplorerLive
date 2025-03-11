@@ -1,94 +1,70 @@
-// src/lib/utils/MetricsService.js
+// src/lib/utils/MetricsService.ts
 import { writable, get } from 'svelte/store';
 
+export interface DailyMetrics {
+  date: string;
+  labels: Array<{
+    label: string;
+    count: number;
+    style: string;
+  }>;
+  totalTransactions: number;
+}
+
+interface MetricsState {
+  dailyData: DailyMetrics[];
+  isLoading: boolean;
+  error: string | null;
+}
+
 // Initial state
-const initialState = {
+const initialState: MetricsState = {
   dailyData: [],
   isLoading: false,
   error: null
 };
 
 // Create a Svelte store for metrics
-const metricsStore = writable(initialState);
+const metricsStore = writable<MetricsState>(initialState);
 
 // Service to handle metrics data
 class MetricsService {
-  constructor() {
-    this.STORAGE_KEY = 'ergo_transaction_metrics';
-    this.MAX_DAYS_TO_STORE = 90; // Store 90 days of data
-    this.loadFromStorage();
-  }
+  private readonly STORAGE_KEY = 'ergo_transaction_metrics';
+  private readonly MAX_DAYS_TO_STORE = 90; // Store 90 days of data
 
-  /**
-   * Debug logger
-   */
-  debug(message, data) {
-    console.log(`🔍 METRICS SERVICE: ${message}`, data);
+  constructor() {
+    this.loadFromStorage();
   }
 
   /**
    * Load metrics from localStorage
    */
-  loadFromStorage() {
+  private loadFromStorage(): void {
     metricsStore.update(state => ({ ...state, isLoading: true }));
-    this.debug('Loading metrics from storage', {});
     
     try {
       const storedData = localStorage.getItem(this.STORAGE_KEY);
       
       if (storedData) {
-        let parsedData;
-        try {
-          parsedData = JSON.parse(storedData);
-          this.debug('Parsed stored data', { count: parsedData.length });
-        } catch (parseError) {
-          console.error('❌ Error parsing stored data:', parseError);
-          metricsStore.update(state => ({
-            ...state,
-            error: 'Failed to parse stored metrics data',
-            isLoading: false
-          }));
-          return;
-        }
-        
-        // Validate data structure
-        if (!Array.isArray(parsedData)) {
-          console.error('❌ Stored data is not an array:', parsedData);
-          metricsStore.update(state => ({
-            ...state,
-            error: 'Invalid metrics data format',
-            isLoading: false
-          }));
-          return;
-        }
-        
-        // Filter out invalid entries
-        const validData = parsedData.filter(day => {
-          return day && day.date && day.labels && Array.isArray(day.labels);
-        });
-        
+        const parsedData = JSON.parse(storedData);
         metricsStore.update(state => ({
           ...state,
-          dailyData: validData,
+          dailyData: parsedData,
           isLoading: false
         }));
-        
-        this.debug('Successfully loaded metrics data', { 
-          count: validData.length,
-          sample: validData.length > 0 ? validData[0] : null
-        });
+        console.log('📊 Loaded metrics data from storage:', parsedData.length, 'days');
       } else {
-        this.debug('No stored metrics data found', {});
         metricsStore.update(state => ({
           ...state,
           isLoading: false
         }));
+        console.log('📊 No metrics data found in storage');
       }
     } catch (error) {
       console.error('❌ Error loading metrics data:', error);
       metricsStore.update(state => ({
         ...state,
-        error: 'Failed to load metrics data: ' + (error.message || 'Unknown error'),
+        error: 'Failed to load metrics data',
         isLoading: false
       }));
     }
@@ -97,15 +73,15 @@ class MetricsService {
   /**
    * Save metrics to localStorage
    */
-  saveToStorage(data) {
+  private saveToStorage(data: DailyMetrics[]): void {
     try {
       localStorage.setItem(this.STORAGE_KEY, JSON.stringify(data));
-      this.debug('Saved metrics data to storage', { count: data.length });
+      console.log('💾 Saved metrics data to storage:', data.length, 'days');
     } catch (error) {
       console.error('❌ Error saving metrics data:', error);
       metricsStore.update(state => ({
         ...state,
-        error: 'Failed to save metrics data: ' + (error.message || 'Unknown error')
+        error: 'Failed to save metrics data'
       }));
     }
   }
@@ -113,31 +89,24 @@ class MetricsService {
   /**
    * Get date string in YYYY-MM-DD format
    */
-  getDateString(date = new Date()) {
+  private getDateString(date: Date = new Date()): string {
     return date.toISOString().split('T')[0];
   }
 
   /**
    * Save daily transaction metrics
-   * @param {Array} labelCounts Array of label counts
+   * @param labelCounts Array of label counts
    */
-  saveDailyMetrics(labelCounts) {
-    if (!labelCounts || !Array.isArray(labelCounts)) {
-      console.error('❌ Invalid label counts:', labelCounts);
-      return;
-    }
-    
-    this.debug('Saving daily metrics', { labelCounts });
-    
+  saveDailyMetrics(labelCounts: Array<{ label: string, count: number, style: string }>): void {
     const today = this.getDateString();
-    const totalTransactions = labelCounts.reduce((sum, label) => sum + (label.count || 0), 0);
+    const totalTransactions = labelCounts.reduce((sum, label) => sum + label.count, 0);
     
     metricsStore.update(state => {
       // Create new dailyData array
-      let newDailyData = [...(state.dailyData || [])];
+      let newDailyData = [...state.dailyData];
       
       // Find if we already have metrics for today
-      const todayIndex = newDailyData.findIndex(day => day && day.date === today);
+      const todayIndex = newDailyData.findIndex(day => day.date === today);
       
       if (todayIndex >= 0) {
         // Update existing day
@@ -146,7 +115,6 @@ class MetricsService {
           labels: [...labelCounts],
           totalTransactions
         };
-        this.debug('Updated existing day entry', { date: today });
       } else {
         // Add new day
         newDailyData.push({
@@ -154,7 +122,6 @@ class MetricsService {
           labels: [...labelCounts],
           totalTransactions
         });
-        this.debug('Added new day entry', { date: today });
         
         // Sort by date (newest first)
         newDailyData.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
@@ -162,7 +129,6 @@ class MetricsService {
         // Limit to MAX_DAYS_TO_STORE days
         if (newDailyData.length > this.MAX_DAYS_TO_STORE) {
           newDailyData = newDailyData.slice(0, this.MAX_DAYS_TO_STORE);
-          this.debug('Trimmed data to max days', { max: this.MAX_DAYS_TO_STORE });
         }
       }
       
@@ -174,88 +140,56 @@ class MetricsService {
         dailyData: newDailyData
       };
     });
+    
+    console.log('📊 Saved daily metrics for:', today);
   }
 
   /**
    * Get metrics by date range
-   * @param {string} startDate Start date (YYYY-MM-DD)
-   * @param {string} endDate End date (YYYY-MM-DD)
-   * @returns {Array} Array of metrics data
+   * @param startDate Start date (YYYY-MM-DD)
+   * @param endDate End date (YYYY-MM-DD)
    */
-  getMetricsByDateRange(startDate, endDate) {
+  getMetricsByDateRange(startDate: string, endDate: string): DailyMetrics[] {
     const state = get(metricsStore);
-    this.debug('Getting metrics by date range', { startDate, endDate });
-    
-    if (!state.dailyData || !Array.isArray(state.dailyData)) {
-      this.debug('No valid daily data available', {});
-      return [];
-    }
     
     return state.dailyData.filter(day => {
-      return day && day.date && day.date >= startDate && day.date <= endDate;
+      return day.date >= startDate && day.date <= endDate;
     });
   }
 
   /**
    * Get metrics for the last N days
-   * @param {number} days Number of days to retrieve
-   * @returns {Array} Array of metrics data
+   * @param days Number of days to retrieve
    */
-  getMetricsForLastDays(days) {
+  getMetricsForLastDays(days: number): DailyMetrics[] {
     const state = get(metricsStore);
-    this.debug('Getting metrics for last days', { days });
-    
-    if (!state.dailyData || !Array.isArray(state.dailyData)) {
-      this.debug('No valid daily data available', {});
-      return [];
-    }
     
     // Sort by date (newest first) and take first 'days' items
-    const sortedData = [...state.dailyData]
-      .filter(day => day && day.date) // Ensure valid entries
+    return state.dailyData
       .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
       .slice(0, days);
-    
-    this.debug('Retrieved metrics for last days', { 
-      requested: days, 
-      retrieved: sortedData.length 
-    });
-    
-    return sortedData;
   }
 
   /**
    * Export metrics data as JSON
-   * @returns {string} JSON string
    */
-  exportMetricsAsJson() {
+  exportMetricsAsJson(): string {
     const state = get(metricsStore);
-    this.debug('Exporting metrics as JSON', { count: state.dailyData.length });
     return JSON.stringify(state.dailyData, null, 2);
   }
 
   /**
    * Export metrics data as CSV
-   * @returns {string} CSV string
    */
-  exportMetricsAsCsv() {
+  exportMetricsAsCsv(): string {
     const state = get(metricsStore);
-    this.debug('Exporting metrics as CSV', { count: state.dailyData.length });
-    
-    if (!state.dailyData || !Array.isArray(state.dailyData) || state.dailyData.length === 0) {
-      return 'Date,Total Transactions\nNo data available';
-    }
     
     // Get all unique labels across all days
-    const allLabels = new Set();
+    const allLabels = new Set<string>();
     state.dailyData.forEach(day => {
-      if (day && day.labels && Array.isArray(day.labels)) {
-        day.labels.forEach(label => {
-          if (label && label.label) {
-            allLabels.add(label.label);
-          }
-        });
-      }
+      day.labels.forEach(label => {
+        allLabels.add(label.label);
+      });
     });
     
     // Create CSV header
@@ -264,27 +198,18 @@ class MetricsService {
     
     // Create CSV rows
     state.dailyData.forEach(day => {
-      if (!day || !day.date) return;
-      
-      const labelMap = new Map();
+      const labelMap = new Map<string, number>();
       
       // Create map of label to count
-      if (day.labels && Array.isArray(day.labels)) {
-        day.labels.forEach(label => {
-          if (label && label.label) {
-            labelMap.set(label.label, label.count || 0);
-          }
-        });
-      }
+      day.labels.forEach(label => {
+        labelMap.set(label.label, label.count);
+      });
       
       // Create row data
       const rowData = [
         day.date,
-        (day.totalTransactions || 0).toString(),
-        ...Array.from(allLabels).map(label => {
-          const count = labelMap.get(label);
-          return count !== undefined ? count.toString() : '0';
-        })
+        day.totalTransactions.toString(),
+        ...Array.from(allLabels).map(label => labelMap.get(label)?.toString() || '0')
       ];
       
       csvRows.push(rowData.join(','));
@@ -296,8 +221,7 @@ class MetricsService {
   /**
    * Clear all metrics data
    */
-  clearAllMetrics() {
-    this.debug('Clearing all metrics data', {});
+  clearAllMetrics(): void {
     metricsStore.set({
       dailyData: [],
       isLoading: false,
@@ -305,6 +229,7 @@ class MetricsService {
     });
     
     localStorage.removeItem(this.STORAGE_KEY);
+    console.log('🧹 Cleared all metrics data');
   }
 }
 

@@ -1,0 +1,143 @@
+[
+  {
+    "date": "2025-02-24",
+    "labels": [
+      {
+        "label": "P2P",
+        "count": 676,
+        "style": "bg-gray-500/30"
+      },
+      {
+        "label": "SigUSD Oracle",
+        "count": 370,
+        "style": "bg-blue-500/70"
+      },
+      {
+        "label": "Gold Oracle",
+        "count": 86,
+        "style": "bg-yellow-500/70"
+      },
+      {
+        "label": "Dex Trade",
+        "count": 78,
+        "style": "bg-pink-500/70"
+      },
+      {
+        "label": "KuCoin",
+        "count": 75,
+        "style": "bg-gray-500/30"
+      },
+      {
+        "label": "Duckpools",
+        "count": 60,
+        "style": "bg-green-500/70"
+      },
+      {
+        "label": "Coinex",
+        "count": 30,
+        "style": "bg-gray-500/30"
+      },
+      {
+        "label": "Hero Miners",
+        "count": 18,
+        "style": "bg-gray-500/30"
+      },
+      {
+        "label": "Mew Finance",
+        "count": 17,
+        "style": "bg-purple-500/70"
+      },
+      {
+        "label": "Sky Harbor",
+        "count": 15,
+        "style": "bg-gray-500/30"
+      },
+      {
+        "label": "Duckpool rsADA",
+        "count": 12,
+        "style": "bg-pink-500/70"
+      },
+      {
+        "label": "Crooks Finance",
+        "count": 8,
+        "style": "bg-gray-500/30"
+      },
+      {
+        "label": "SigmaUSD",
+        "count": 7,
+        "style": "bg-gray-500/30"
+      },
+      {
+        "label": "Cyberverse",
+        "count": 7,
+        "style": "bg-gray-500/30"
+      },
+      {
+        "label": " Rosen Bridge Binance test",
+        "count": 6,
+        "style": "bg-orange-500/70"
+      },
+      {
+        "label": "TabbyPOS",
+        "count": 6,
+        "style": "bg-gray-500/30"
+      },
+      {
+        "label": "Nano Pool",
+        "count": 5,
+        "style": "bg-gray-500/30"
+      },
+      {
+        "label": "Wooly Pooly",
+        "count": 5,
+        "style": "bg-gray-500/30"
+      },
+      {
+        "label": "GluonW Gold",
+        "count": 4,
+        "style": "bg-yellow-500/70"
+      },
+      {
+        "label": "2miners",
+        "count": 4,
+        "style": "bg-gray-500/30"
+      },
+      {
+        "label": "Sky Harbor Sale: NaN ERG",
+        "count": 2,
+        "style": "bg-blue-500/70"
+      },
+      {
+        "label": "Xeggex",
+        "count": 2,
+        "style": "bg-gray-500/30"
+      },
+      {
+        "label": "MEXC",
+        "count": 2,
+        "style": "bg-gray-500/30"
+      },
+      {
+        "label": "ErgoTipperBot",
+        "count": 2,
+        "style": "bg-gray-500/30"
+      },
+      {
+        "label": "K1 Pool",
+        "count": 2,
+        "style": "bg-gray-500/30"
+      },
+      {
+        "label": "Sigmanauts",
+        "count": 1,
+        "style": "bg-gray-500/30"
+      },
+      {
+        "label": "Huobi",
+        "count": 1,
+        "style": "bg-gray-500/30"
+      }
+    ],
+    "totalTransactions": 1501
+  }
+]

@@ -1,6 +1,7 @@
-// src/routes/metrics/+page.js
+// src/routes/ergexplorerlive/metrics.svelte (or .js/.ts depending on your setup)
 export function load() {
     return {
-        // You can add any server data here if needed
+      prerender: false
     };
-}
+  }
+  
