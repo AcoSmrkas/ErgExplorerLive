@@ -9,6 +9,8 @@
 	import gridHelp from '$lib/svelte-grid/utils/helper';
 	import { fade } from 'svelte/transition';
 
+	const ROW_ASSETS = 3;
+
 	let container: Element | null = null;
 	let transactions: Array<any> = $state([]);
 	let colN = [1, 2, 3, 4, 6, 8, 10, 13];
@@ -72,9 +74,9 @@
 					item.burned.toNumber() !== 0 ||
 					item.minted.toNumber() !== 0
 			).length;
-
-			const maxX = col > 4 ? 4 : col;
-			const calculatedH = Math.ceil(assetCount / 4);
+			console.log(assetCount);
+			const maxX = col > ROW_ASSETS ? ROW_ASSETS : col;
+			const calculatedH = Math.ceil(assetCount / ROW_ASSETS);
 			const calculatedW = assetCount >= maxX ? maxX : assetCount;
 
 			item = {
@@ -158,9 +160,8 @@
 		<Grid
 			bind:items
 			gap={[6, 6]}
-			headerHeight={12}
-			rowHeight={130}
-			let:item
+			headerHeight={45}
+			rowHeight={100}
 			let:dataItem
 			{cols}
 			fillSpace={true}
