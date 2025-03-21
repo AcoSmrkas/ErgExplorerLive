@@ -7,7 +7,8 @@ import {
 	tempBoxData,
 	assetInfos,
 	fetchingAssetData,
-	fetchingBoxData
+	fetchingBoxData,
+	addressBook
 } from '$lib/store/store';
 import { ErgoAddress } from '@fleet-sdk/core';
 
@@ -23,9 +24,6 @@ export function trackNetAssetTransfers(thisTransaction: {
 		assets?: { tokenId: string; amount: number; decimals: number }[];
 	}[];
 }) {
-	// Import BigNumber if not already imported
-	// import BigNumber from 'bignumber.js';
-
 	// Step 1: Create maps to track assets by address and total amounts
 	const inputsByAddress = new Map<string, Map<string, BigNumber>>();
 	const outputsByAddress = new Map<string, Map<string, BigNumber>>();
@@ -478,7 +476,7 @@ export function nFormatter(
 			});
 }
 
-export function formatTimeDifference(unixTimestamp) {
+export function formatTimeDifference(unixTimestamp: number) {
 	if (!unixTimestamp) return '';
 
 	// Get the current time in milliseconds
@@ -499,4 +497,47 @@ export function formatTimeDifference(unixTimestamp) {
 
 	// Return the formatted time difference
 	return `${formattedMinutes}:${formattedSeconds}.${formattedMilliseconds}`;
+}
+
+export async function fetchAddressBook() {
+	try {
+		const PAGE_SIZE = 300;
+		const newAddressBook = new Map();
+		let offset = 0;
+		let hasMore = true;
+
+		while (hasMore) {
+			const response = await fetch(
+				`https://api.ergexplorer.com/addressbook/getAddresses?offset=${offset}&limit=${PAGE_SIZE}&type=all&order=nameAsc&testnet=0`
+			);
+			const data = await response.json();
+
+			if (!data || !data.items || data.items.length === 0) {
+				hasMore = false;
+				continue;
+			}
+
+			data.items.forEach(
+				(item: { address: unknown; name: unknown; type: unknown; urltype: unknown }) => {
+					newAddressBook.set(item.address, {
+						name: item.name,
+						type: item.type,
+						urltype: item.urltype
+					});
+				}
+			);
+
+			if (data.items.length < PAGE_SIZE) {
+				hasMore = false;
+			}
+
+			offset += PAGE_SIZE;
+		}
+
+		addressBook.set(newAddressBook);
+
+		console.log('📖 Address book loaded with', newAddressBook.size, 'entries');
+	} catch (error) {
+		console.error('Error fetching address book:', error);
+	}
 }

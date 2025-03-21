@@ -5,8 +5,8 @@
 	import { trackNetAssetTransfers, resolveTxBoxes } from '$lib/common/utils';
 	import { onMount } from 'svelte';
 
-	import Grid from 'svelte-grid';
-	import gridHelp from 'svelte-grid/build/helper/index.mjs';
+	import Grid from '$lib/svelte-grid/index.svelte';
+	import gridHelp from '$lib/svelte-grid/utils/helper';
 	import { fade } from 'svelte/transition';
 
 	let container: Element | null = null;
@@ -155,7 +155,16 @@
 
 <div id="grid-container" class="h-[68vh] max-h-[68vh] overflow-y-scroll">
 	{#if $ready}
-		<Grid bind:items gap={[6, 6]} rowHeight={130} let:item let:dataItem {cols} fillSpace={true}>
+		<Grid
+			bind:items
+			gap={[6, 6]}
+			headerHeight={12}
+			rowHeight={130}
+			let:item
+			let:dataItem
+			{cols}
+			fillSpace={true}
+		>
 			<Transaction transaction={dataItem.data} />
 		</Grid>
 	{:else}

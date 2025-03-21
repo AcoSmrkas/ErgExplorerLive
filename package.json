@@ -45,7 +45,6 @@
 		"axios": "^1.7.9",
 		"bignumber.js": "^9.1.2",
 		"socket.io": "^4.8.1",
-		"socket.io-client": "^4.8.1",
-		"svelte-grid": "^5.1.2"
+		"socket.io-client": "^4.8.1"
 	}
 }

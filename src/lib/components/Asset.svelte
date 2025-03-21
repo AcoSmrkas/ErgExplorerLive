@@ -49,7 +49,7 @@
 			type = 'mint';
 		} else if (asset.amount.toNumber() !== 0) {
 			amount = new BigNumber(asset.amount).div(10 ** decimals).toNumber();
-		} 
+		}
 
 		if (assetInfo.iconurl) {
 			imageUrl = assetInfo.iconurl ?? '';

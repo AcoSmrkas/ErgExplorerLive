@@ -26,9 +26,6 @@ importers:
       socket.io-client:
         specifier: ^4.8.1
         version: 4.8.1
-      svelte-grid:
-        specifier: ^5.1.2
-        version: 5.1.2
     devDependencies:
       '@eslint/compat':
         specifier: ^1.2.5
@@ -1460,9 +1457,6 @@ packages:
       svelte:
         optional: true
 
-  svelte-grid@5.1.2:
-    resolution: {integrity: sha512-Suwgb+L3LALhTyA7z4vn87UOJ+xBY6EeKa6MdWqDv/lZOtQgIZ21ry/I6txIn9IC0p8of4AiOXupkSMcZ+DEug==}
-
   svelte@5.20.1:
     resolution: {integrity: sha512-aCARru2WTdzJl55Ws8SK27+kvQwd8tijl4kY7NoDUXUHtTHhxMa8Lf6QNZKmU7cuPu3jjFloDO1j5HgYJNIIWg==}
     engines: {node: '>=18'}
@@ -2833,8 +2827,6 @@ snapshots:
       postcss-scss: 4.0.9(postcss@8.5.2)
     optionalDependencies:
       svelte: 5.20.1
-
-  svelte-grid@5.1.2: {}
 
   svelte@5.20.1:
     dependencies:

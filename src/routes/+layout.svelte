@@ -7,7 +7,7 @@
 	import Navbar from '$lib/components/Navbar.svelte';
 	import Loading from '$lib/components/Loading.svelte';
 	import type { Socket } from 'socket.io-client';
-	import { fade } from 'svelte/transition';
+	import { fetchAddressBook } from '$lib/common/utils';
 
 	let { children } = $props();
 	let socketConnected = $state(false);
@@ -18,6 +18,10 @@
 		const unsubscribe = socket.subscribe((value: Socket) => {
 			socketConnected = !!value?.connected;
 		});
+
+		(async () => {
+			await fetchAddressBook();
+		})();
 
 		return () => {
 			unsubscribe();

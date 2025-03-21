@@ -19,3 +19,4 @@ export const assetInfos: Writable<unknown> = writable({
 });
 export const fetchingAssetData: Writable<boolean> = writable(false);
 export const fetchingBoxData: Writable<boolean> = writable(false);
+export const addressBook: Writable<Map<unknown, unknown>> = writable(new Map());
