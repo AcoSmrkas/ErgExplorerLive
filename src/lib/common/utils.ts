@@ -477,3 +477,26 @@ export function nFormatter(
 				minimumFractionDigits: minimumFractionDigits
 			});
 }
+
+export function formatTimeDifference(unixTimestamp) {
+	if (!unixTimestamp) return '';
+
+	// Get the current time in milliseconds
+	const now = Date.now();
+
+	// Calculate the difference in milliseconds
+	const diffMs = Math.abs(now - unixTimestamp);
+
+	// Calculate minutes, seconds, and milliseconds
+	const minutes = Math.floor(diffMs / 60000);
+	const seconds = Math.floor((diffMs % 60000) / 1000);
+	const milliseconds = diffMs % 1000;
+
+	// Format minutes and seconds to always have two digits
+	const formattedMinutes = String(minutes).padStart(2, '0');
+	const formattedSeconds = String(seconds).padStart(2, '0');
+	const formattedMilliseconds = String(milliseconds).padStart(2, '0').substring(0, 2);
+
+	// Return the formatted time difference
+	return `${formattedMinutes}:${formattedSeconds}.${formattedMilliseconds}`;
+}

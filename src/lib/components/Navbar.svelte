@@ -1,4 +1,9 @@
+<script>
+	import { fly } from 'svelte/transition';
+</script>
+
 <div
+	in:fly={{ y: -100, duration: 300, delay: 200 }}
 	id="navbar"
 	class="bg-bg fixed z-10 h-auto w-full items-center"
 	style="transition: all 0.5s ease;"

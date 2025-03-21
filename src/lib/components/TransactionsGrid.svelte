@@ -7,6 +7,7 @@
 
 	import Grid from 'svelte-grid';
 	import gridHelp from 'svelte-grid/build/helper/index.mjs';
+	import { fade } from 'svelte/transition';
 
 	let container: Element | null = null;
 	let transactions: Array<any> = $state([]);
@@ -152,12 +153,14 @@
 	}
 </script>
 
-<div id="grid-container" class="h-[69vh] max-h-[69vh] overflow-y-scroll">
+<div id="grid-container" class="h-[68vh] max-h-[68vh] overflow-y-scroll">
 	{#if $ready}
 		<Grid bind:items gap={[6, 6]} rowHeight={130} let:item let:dataItem {cols} fillSpace={true}>
 			<Transaction transaction={dataItem.data} />
 		</Grid>
 	{:else}
-		<Loading height={'full'} />
+		<div class="loading-holder h-full" out:fade|local={{ duration: 200 }}>
+			<Loading />
+		</div>
 	{/if}
 </div>

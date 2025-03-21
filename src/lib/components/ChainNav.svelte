@@ -2,6 +2,7 @@
 	import { nodeInfo } from '$lib/store/store';
 	import { onMount } from 'svelte';
 	import { nFormatter } from '$lib/common/utils';
+	import { fly } from 'svelte/transition';
 
 	let containerWidth: number = $state(0);
 	let container: Element;
@@ -27,7 +28,11 @@
 	});
 </script>
 
-<div bind:this={container} class="fixed bottom-0 left-0 w-full bg-[#333] p-3 md:p-6">
+<div
+	bind:this={container}
+	in:fly={{ y: 200, duration: 300, delay: 500 }}
+	class="fixed bottom-0 left-0 w-full bg-[#333] p-3 md:p-6"
+>
 	<div class="flex items-center justify-center gap-8">
 		{#each Array(numBlocks) as _, i}
 			<div class="flex items-center">

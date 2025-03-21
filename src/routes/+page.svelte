@@ -1,12 +1,7 @@
 <script lang="ts">
-	import { onMount } from 'svelte';
-	import Navbar from '$lib/components/Navbar.svelte';
 	import { goto } from '$app/navigation';
 
-	onMount(() => {
-		goto('/mempool');
-		console.log('wa');
-	});
+	goto('/mempool');
 </script>
 
 <div class="p-2">

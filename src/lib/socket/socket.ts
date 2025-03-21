@@ -1,9 +1,17 @@
 import { get } from 'svelte/store';
 import { io } from 'socket.io-client';
-import { socket, nodeInfo, mempoolTxs, mempoolTxCount, ready } from '$lib/store/store';
-import { SOCKET_URL } from '$lib/common/const';
+import {
+	socket,
+	nodeInfo,
+	mempoolTxs,
+	mempoolTxCount,
+	ready,
+	lastBlockInfo
+} from '$lib/store/store';
+import { EXPLORER_API, SOCKET_URL } from '$lib/common/const';
 import { getAssetInfos, getBoxInfos, collectTokenIds, resolveTxBoxes } from '$lib/common/utils';
 import { fetchingAssetData, fetchingBoxData } from '$lib/store/store';
+import axios from 'axios';
 
 export function initSocket() {
 	if (get(socket) !== undefined) return;
@@ -18,8 +26,25 @@ export function initSocket() {
 		console.error('Connection error:', error);
 	});
 
-	newSocket?.on('info', (info) => {
+	newSocket?.on('info', async (info) => {
+		console.log('Socket on', 'info');
+		console.log(info);
+
+		const lastInfo = get(nodeInfo);
+
 		nodeInfo.set(info);
+
+		if (!lastInfo || info.fullHeight > lastInfo.fullHeight) {
+			const result = await axios.get(
+				`${EXPLORER_API}blocks?limit=1&offset=${info.fullHeight - 1}&sortBy=height&sortDirection=asc`
+			);
+
+			if (result.data.items.length === 0) {
+				lastBlockInfo.set({ timestamp: Date.now() });
+			} else {
+				lastBlockInfo.set(result.data.items[0]);
+			}
+		}
 	});
 
 	newSocket?.on(

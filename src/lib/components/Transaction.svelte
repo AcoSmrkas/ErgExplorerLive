@@ -42,8 +42,6 @@
 			}
 		});
 
-		console.log(proxyTx.id, Object.keys(assets).length);
-
 		thisTransaction = proxyTx;
 	}
 

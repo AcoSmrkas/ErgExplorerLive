@@ -41,16 +41,15 @@
 		decimals = assetInfo.decimals;
 		name = assetInfo.name ? assetInfo.name : assetInfo.id;
 
-		// console.log(asset);
-		if (asset.amount.toNumber() !== 0) {
-			amount = new BigNumber(asset.amount).div(new BigNumber(10).pow(decimals)).toNumber();
-		} else if (asset.burned.toNumber() !== 0) {
-			amount = new BigNumber(asset.burned).div(new BigNumber(10).pow(decimals)).toNumber();
+		if (asset.burned.toNumber() !== 0) {
+			amount = new BigNumber(asset.burned).div(10 ** decimals).toNumber();
 			type = 'burn';
 		} else if (asset.minted.toNumber() !== 0) {
-			amount = new BigNumber(asset.minted).div(new BigNumber(10).pow(decimals)).toNumber();
+			amount = new BigNumber(asset.minted).div(10 ** decimals).toNumber();
 			type = 'mint';
-		}
+		} else if (asset.amount.toNumber() !== 0) {
+			amount = new BigNumber(asset.amount).div(10 ** decimals).toNumber();
+		} 
 
 		if (assetInfo.iconurl) {
 			imageUrl = assetInfo.iconurl ?? '';
@@ -90,6 +89,6 @@
 
 <style>
 	.text-dynamic {
-	  font-size: clamp(0.5em, 2.5vw, 0.65em);
+		font-size: clamp(0.5em, 2.5vw, 0.65em);
 	}
 </style>
