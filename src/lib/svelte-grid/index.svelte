@@ -149,11 +149,9 @@
 				draggable={item[getComputedCols] && item[getComputedCols].draggable}
 				{xPerPx}
 				{yPerPx}
-				width={Math.min(getComputedCols, item[getComputedCols] && item[getComputedCols].w) *
-					xPerPx -
-					gapX * 2}
-				height={(item[getComputedCols] && item[getComputedCols].h) * yPerPx + header - gapY * 2}
-				top={(item[getComputedCols] && item[getComputedCols].y) * (yPerPx + header) + gapY}
+				width={Math.min(getComputedCols, item[getComputedCols] && item[getComputedCols].w) * xPerPx - gapX * 2}
+				height={(item[getComputedCols] && item[getComputedCols].h) * (yPerPx + header) - gapY * 2 + (item[getComputedCols] && item[getComputedCols].h)}
+				top={(item[getComputedCols] && item[getComputedCols].y) * (yPerPx + header) + + gapY}
 				left={(item[getComputedCols] && item[getComputedCols].x) * xPerPx + gapX}
 				item={item[getComputedCols]}
 				min={item[getComputedCols] && item[getComputedCols].min}

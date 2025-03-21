@@ -87,7 +87,7 @@
 				{/each}
 			{/if}
 		{:else if Object.keys(assets).length > 0}
-			<div class="flex flex-wrap place-content-around">
+			<div class="flex flex-wrap place-content-around align-start">
 				{#each Object.entries(assets) as [tokenId, asset]}
 					<Asset {asset} />
 				{/each}
