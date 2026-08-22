@@ -1,0 +1,8 @@
+# pnpm >= 11 no longer reads "pnpm.onlyBuiltDependencies" from package.json.
+# esbuild needs its postinstall to fetch the platform binary, or vite cannot build.
+# Both keys are kept so the project builds on pnpm 10 (onlyBuiltDependencies)
+# and pnpm 11 (allowBuilds) alike.
+allowBuilds:
+  esbuild: true
+onlyBuiltDependencies:
+  - esbuild
