@@ -1,8 +1,9 @@
 import { get } from 'svelte/store';
 import { io } from 'socket.io-client';
-import { socket, nodeInfo, lastBlockInfo } from '$lib/store/store';
+import { socket, nodeInfo, lastBlockInfo, connected } from '$lib/store/store';
 import { SOCKET_URL } from '$lib/common/const';
 import { getBlockTimestamp } from '$lib/common/chain';
+import { refreshBlocks } from '$lib/common/blocks';
 import { onMempool } from '$lib/common/mempool';
 
 export function initSocket() {
@@ -12,6 +13,11 @@ export function initSocket() {
 
 	newSocket?.on('connect', () => {
 		console.log('Connected to server at', SOCKET_URL);
+		connected.set(true);
+	});
+
+	newSocket?.on('disconnect', () => {
+		connected.set(false);
 	});
 
 	newSocket?.on('connect_error', (error) => {
@@ -24,6 +30,8 @@ export function initSocket() {
 		nodeInfo.set(info);
 
 		if (!lastInfo || info.fullHeight > lastInfo.fullHeight) {
+			refreshBlocks(info.fullHeight);
+
 			const timestamp = await getBlockTimestamp(info.bestFullHeaderId);
 
 			// A newer block may have come in while this one's header was fetched.

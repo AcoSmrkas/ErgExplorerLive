@@ -251,6 +251,10 @@ export function truncateAddress(address: string, len: number) {
 	return `${address.substring(0, len)}...${address.substring(address.length - len)}`;
 }
 
+export function shortAddress(address: string) {
+	return address.length > 12 ? `${address.slice(0, 4)}…${address.slice(-4)}` : address;
+}
+
 // The same contracts (DEX pools, oracles, bots) recur in most txs, and decoding is the
 // slow part of building one.
 const addresses = new Map<string, string>();

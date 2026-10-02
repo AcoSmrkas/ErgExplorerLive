@@ -1,42 +1,77 @@
 @import 'tailwindcss';
 
+@theme {
+	--color-primary: #fb5c16;
+	--font-sans: 'Recursive', ui-sans-serif, system-ui, sans-serif;
+}
+
 :root {
 	--main-color: #fb5c16;
 	--main-color-hover: #ff8418;
-	--striped-1: #262626;
-	--text-color: #aaa;
-	--forms-bg: #333;
-	--borders: #4f4f4f;
-	--text-light: #999;
-	--text-strong: #ccc;
-	--background: #222;
-	--footer: var(--forms-bg);
+	--bg: #0f0f11;
+	--surface: #17171a;
+	--surface-2: #1e1e22;
+	--border: #2a2a30;
+	--border-strong: #3a3a42;
+	--text: #ececf1;
+	--muted: #8d8d98;
+	--faint: #5d5d68;
+	--chain-height: 104px;
+
+	color-scheme: dark;
+}
+
+html {
+	background: var(--bg);
 }
 
 body {
-	background-color: var(--background);
-	color: var(--text-color);
-	font-family: 'Recursive', monospace;
+	min-height: 100vh;
+	color: var(--text);
+	font-family: 'Recursive', ui-sans-serif, system-ui, sans-serif;
+	-webkit-font-smoothing: antialiased;
+	background: var(--bg);
+}
+
+/* The glow and dot grid sit on their own fixed layer, painted once. As a fixed body
+   background they were repainted on every scroll frame. */
+body::before {
+	content: '';
+	position: fixed;
+	inset: 0;
+	z-index: -1;
+	pointer-events: none;
+	background:
+		radial-gradient(1100px 520px at 50% -240px, rgb(251 92 22 / 0.16), transparent 70%),
+		radial-gradient(rgb(255 255 255 / 0.035) 1px, transparent 1px) 0 0 / 22px 22px;
+}
+
+/* Recursive's monospace axis, with digits of equal width so live numbers don't jitter. */
+.mono {
+	font-variation-settings: 'MONO' 1;
+	font-variant-numeric: tabular-nums;
 }
 
 .text-primary {
 	color: var(--main-color);
 }
 
-.border-primary {
-	border-color: var(--main-color);
-}
-
 .bg-primary {
 	background: var(--main-color);
 }
 
-.bg-bg {
-	background: var(--background);
+a:focus-visible,
+button:focus-visible {
+	outline: 2px solid var(--main-color);
+	outline-offset: 2px;
+	border-radius: 10px;
 }
 
-.bg-form {
-	background: var(--forms-bg);
+.panel {
+	background: linear-gradient(180deg, var(--surface-2), var(--surface));
+	border: 1px solid var(--border);
+	border-radius: 16px;
+	box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.03);
 }
 
 .loading-holder {
@@ -44,4 +79,14 @@ body {
 	display: flex;
 	justify-content: center;
 	align-items: center;
+}
+
+@media (prefers-reduced-motion: reduce) {
+	*,
+	*::before,
+	*::after {
+		animation-duration: 1ms !important;
+		animation-iteration-count: 1 !important;
+		transition-duration: 1ms !important;
+	}
 }

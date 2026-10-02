@@ -1,5 +1,6 @@
+import BigNumber from 'bignumber.js';
 import { get } from 'svelte/store';
-import { SOCKET_URL } from '$lib/common/const';
+import { FEE_ADDRESS, SOCKET_URL } from '$lib/common/const';
 import {
 	collectTokenIds,
 	ergoTreeToAddress,
@@ -31,6 +32,12 @@ export type MempoolTx = {
 	transfers: Transfer[];
 	/** Spends a box that went unspent for four years, claiming its storage rent. */
 	storageRent: boolean;
+	/** Who paid: see parties(). */
+	from: Box | 'multiple';
+	/** Who got paid: see parties(). */
+	to: Box | 'multiple' | 'itself';
+	/** Arrived after the page loaded, rather than in the first snapshot. */
+	fresh: boolean;
 };
 
 // The socket sends at most the node's first page of the pool.
@@ -45,6 +52,7 @@ const built = new Map<string, MempoolTx>();
 
 let pending: RawTx[] | null = null;
 let running = false;
+let applied = false;
 
 /**
  * Takes a snapshot of the pool from the socket. Snapshots that arrive while one is
@@ -93,6 +101,7 @@ async function apply(txs: RawTx[]) {
 	mempoolTxs.set([...shown, ...added]);
 	mempoolTxCount.set(live.length);
 	ready.set(true);
+	applied = true;
 
 	if (txs.length >= BROADCAST_LIMIT) void fetchPoolSize();
 }
@@ -112,7 +121,63 @@ function build(tx: RawTx): MempoolTx {
 		(t) => !t.amount.isZero() || !t.minted.isZero() || !t.burned.isZero()
 	);
 
-	return { ...resolved, transfers, storageRent: tx.inputs.some(isStorageRentSpend) };
+	return {
+		...resolved,
+		transfers,
+		storageRent: tx.inputs.some(isStorageRentSpend),
+		...parties(resolved),
+		fresh: applied
+	};
+}
+
+/**
+ * Who paid and who got paid, from each address's net change in ERG and every token.
+ * A sender's holdings only went down; a receiver's only went up. An address that went
+ * both ways (a DEX pool, an oracle contract, a minter) is a go-between. The miner fee
+ * is left out. Several of either read "multiple". With no sender, the first input
+ * stands in. With no receiver, the go-between the sender dealt with does (an oracle
+ * operator posting a datapoint pays the oracle), and failing that the tx paid itself.
+ */
+function parties(tx: { inputs: Box[]; outputs: Box[] }): Pick<MempoolTx, 'from' | 'to'> {
+	const net = new Map<string, { box: Box; change: Map<string, BigNumber> }>();
+
+	const add = (box: Box, sign: 1 | -1) => {
+		if (box.address === FEE_ADDRESS) return;
+
+		const entry = net.get(box.address!) ?? { box, change: new Map() };
+		const move = (tokenId: string, amount: number) =>
+			entry.change.set(
+				tokenId,
+				(entry.change.get(tokenId) ?? new BigNumber(0)).plus(new BigNumber(amount).times(sign))
+			);
+
+		move('ERG', box.value);
+		for (const asset of box.assets ?? []) move(asset.tokenId, asset.amount);
+		net.set(box.address!, entry);
+	};
+
+	tx.inputs.forEach((box) => add(box, -1));
+	tx.outputs.forEach((box) => add(box, 1));
+
+	const senders: Box[] = [];
+	const receivers: Box[] = [];
+	const goBetweens: Box[] = [];
+
+	for (const { box, change } of net.values()) {
+		const gave = [...change.values()].some((v) => v.isNegative());
+		const got = [...change.values()].some((v) => v.isPositive());
+
+		if (gave && got) goBetweens.push(box);
+		else if (gave) senders.push(box);
+		else if (got) receivers.push(box);
+	}
+
+	const from = senders.length > 1 ? 'multiple' : (senders[0] ?? tx.inputs[0]);
+	const fromAddress = typeof from === 'string' ? undefined : from.address;
+	const others = goBetweens.filter((box) => box.address !== fromAddress);
+	const pick = (boxes: Box[]) => (boxes.length > 1 ? 'multiple' : boxes[0]);
+
+	return { from, to: pick(receivers) ?? pick(others) ?? 'itself' };
 }
 
 /**
