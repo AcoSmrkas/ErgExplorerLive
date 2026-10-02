@@ -1,62 +1,34 @@
 <script lang="ts">
 	import { ERGEXPLORER_URL } from '$lib/common/const';
-	import { nFormatter } from '$lib/common/utils';
+	import { nFormatter, type Transfer } from '$lib/common/utils';
 	import { assetInfos } from '$lib/store/store';
-	import { onMount } from 'svelte';
-	import { get } from 'svelte/store';
 	import BigNumber from 'bignumber.js';
 
-	let { asset } = $props();
-	let decimals = $state(0);
-	let name = $state('');
-	let imageUrl = $state('');
-	let link = $state('');
-	let amount = $state(0);
-	let type = $state('normal');
+	type AssetInfo = {
+		id: string;
+		decimals: number;
+		name: string;
+		tokenicon?: string;
+		iconurl?: string;
+		cachedurl?: string;
+	};
 
-	onMount(() => {
-		const assets = get(assetInfos) as {
-			[key: string]: {
-				id: string;
-				decimals: number;
-				name: string;
-				tokenicon?: string;
-				iconurl?: string;
-				cachedurl?: string;
-			};
-		};
+	let { asset }: { asset: Transfer } = $props();
 
-		if (asset.tokenId !== 'ERG') {
-			link = `${ERGEXPLORER_URL}token/${asset.tokenId}`;
-		}
-
-		const assetInfo = assets[asset.tokenId];
-
-		if (!assetInfo) {
-			name = asset.tokenId;
-			console.error('No asset info for', asset.tokenId);
-			return;
-		}
-
-		decimals = assetInfo.decimals;
-		name = assetInfo.name ? assetInfo.name : assetInfo.id;
-
-		if (asset.burned.toNumber() !== 0) {
-			amount = new BigNumber(asset.burned).div(10 ** decimals).toNumber();
-			type = 'burn';
-		} else if (asset.minted.toNumber() !== 0) {
-			amount = new BigNumber(asset.minted).div(10 ** decimals).toNumber();
-			type = 'mint';
-		} else if (asset.amount.toNumber() !== 0) {
-			amount = new BigNumber(asset.amount).div(10 ** decimals).toNumber();
-		}
-
-		if (assetInfo.iconurl) {
-			imageUrl = assetInfo.iconurl ?? '';
-		} else if (assetInfo.cachedurl) {
-			imageUrl = assetInfo.cachedurl ?? '';
-		}
-	});
+	// Reactive, so a tile rendered before its token's info arrived picks it up later.
+	let assetInfo = $derived(($assetInfos as { [key: string]: AssetInfo })[asset.tokenId]);
+	let decimals = $derived(assetInfo?.decimals ?? 0);
+	let name = $derived(assetInfo ? assetInfo.name || assetInfo.id : asset.tokenId);
+	let imageUrl = $derived(assetInfo?.iconurl || assetInfo?.cachedurl || '');
+	let link = $derived(asset.tokenId !== 'ERG' ? `${ERGEXPLORER_URL}token/${asset.tokenId}` : '');
+	let type = $derived(
+		!asset.burned.isZero() ? 'burn' : !asset.minted.isZero() ? 'mint' : 'normal'
+	);
+	let amount = $derived(
+		new BigNumber(type === 'burn' ? asset.burned : type === 'mint' ? asset.minted : asset.amount)
+			.div(10 ** decimals)
+			.toNumber()
+	);
 </script>
 
 <div

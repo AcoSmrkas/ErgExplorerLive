@@ -1,10 +1,17 @@
 <script lang="ts">
-	import { resolveTxBoxes } from '$lib/common/utils';
 	import { addressBook } from '$lib/store/store';
-	import { onMount } from 'svelte';
+	import type { Box, MempoolTx } from '$lib/common/mempool';
+	import { contractDetector, type ContractDetector } from '$lib/common/contracts';
+
+	type AddressBook = Map<string, { name: string; type: string }>;
+	type Label = { label: string; style: string };
 
 	// Constants
 	const EXCLUDED_LABELS = ['Ergo Platform (Miner Fee)'];
+	// Nearly every tx pays the miner fee, and the address book names this address
+	// plain "Ergo Platform", so it would label every tx and hide the contract labels.
+	const FEE_ADDRESS =
+		'2iHkR7CWvD1R4j1yZg5bkeDRQavjAaVPeTDFGGLZduHyfWMuYpmhHocX8GJoaieTx78FntzJbCBVL6rf96ocJoZdmWBL2fci7NqWgAirppPQmZ7fN9V6z13Ay6brPriBKYqLp1bT2Fk4FkFLCfdPpe';
 
 	// Special transaction configurations
 	const SPECIAL_CONFIG = {
@@ -46,26 +53,58 @@
 		}
 	};
 
-	let { transaction } = $props();
-	let thisTransaction: any = $state({});
+	let { transaction }: { transaction: MempoolTx } = $props();
 
-	let txLabels: Array<{ label: string; style: string }> = $state([]);
-	let addressBookAddresses = $state(new Map());
+	// Recomputed when the address book and the contract templates arrive, which is
+	// usually after the first tiles.
+	let txLabels = $derived(
+		determineTransactionLabels(transaction, $addressBook, $contractDetector)
+	);
 
-	function updateLabels() {
-		const proxyTx = resolveTxBoxes(transaction);
+	const customStyles = {
+		gold: 'bg-yellow-500/70',
+		mew: 'bg-purple-500/70',
+		duckpool: 'bg-yellow-500/70',
+		dex: 'bg-pink-500/70',
+		spectrum: 'bg-pink-500/70',
+		crux: 'bg-pink-500/70',
+		lithos: 'bg-pink-500/70',
+		rosen: 'bg-orange-500/70',
+		sigusd: 'bg-blue-500/70',
+		oracle: 'bg-blue-500/70',
+		mixer: 'bg-purple-500/70',
+		default: 'bg-gray-500/30'
+	};
 
-		// Determine transaction labels and store them
-		txLabels = determineTransactionLabels(proxyTx);
+	// By the address book's type, for names no keyword above matches.
+	const typeStyles: { [type: string]: string } = {
+		Exchange: 'bg-teal-500/70',
+		'Mining pool': 'bg-amber-700/70',
+		Meme: 'bg-fuchsia-500/70',
+		// Contracts named by template rather than by the address book
+		Contract: 'bg-indigo-500/60'
+	};
 
-		// Store labels on the transaction object for easier access
-		proxyTx.txLabels = txLabels;
+	function getCustomStyle(label: string, type?: string): string {
+		const lowerLabel = label.toLowerCase();
 
-		thisTransaction = proxyTx;
+		for (const [key, style] of Object.entries(customStyles)) {
+			if (key !== 'default' && lowerLabel.includes(key)) return style;
+		}
+
+		return (type && typeStyles[type]) || customStyles.default;
 	}
 
-	function determineTransactionLabels(tx: any): { label: string; style: string }[] {
-		const labels = [];
+	function determineTransactionLabels(
+		tx: MempoolTx,
+		addressBookAddresses: AddressBook,
+		detectContract: ContractDetector | null
+	): Label[] {
+		const labels: Label[] = [];
+
+		if (tx.storageRent) {
+			labels.push({ label: 'Storage Rent', style: 'bg-rose-500/70' });
+		}
 
 		// Check special configurations first
 		Object.entries(SPECIAL_CONFIG).forEach(([key, config]) => {
@@ -95,9 +134,14 @@
 		});
 
 		// Then check address book labels
-		const addressBookLabels = determineAddressBookLabels(tx);
+		const addressBookLabels = determineAddressBookLabels(tx, addressBookAddresses);
 		if (addressBookLabels.length > 0) {
 			labels.push(...addressBookLabels);
+		}
+
+		// Then the contracts ErgExplorer knows by template, for addresses the book doesn't name
+		if (labels.length === 0 && detectContract) {
+			labels.push(...determineContractLabels(tx, detectContract));
 		}
 
 		// If no labels were found, add a default transfer label
@@ -109,61 +153,54 @@
 			labels.push(defaultLabel);
 		}
 
-		// Store labels on the transaction object itself for easier access
-		tx.txLabels = labels;
-
 		// Return the labels (first label will be displayed in the UI)
 		return labels;
 	}
 
-	function checkForSpecialTokens(tx: any, tokenList: string[], requireBothInputOutput = false) {
+	function determineContractLabels(tx: MempoolTx, detectContract: ContractDetector): Label[] {
+		const labels = new Map<string, Label>();
+
+		[...tx.inputs, ...tx.outputs].forEach((box) => {
+			const label = box.ergoTree ? detectContract(box.ergoTree) : null;
+
+			if (label && !labels.has(label)) {
+				labels.set(label, { label, style: getCustomStyle(label, 'Contract') });
+			}
+		});
+
+		return [...labels.values()];
+	}
+
+	function checkForSpecialTokens(
+		tx: MempoolTx,
+		tokenList: string[],
+		requireBothInputOutput = false
+	) {
 		return tokenList.some((tokenId) => {
-			const hasInInputs = tx.inputs.some((input: { assets: any[] }) =>
+			const hasInInputs = tx.inputs.some((input) =>
 				input.assets?.some((asset) => asset.tokenId === tokenId)
 			);
-			const hasInOutputs = tx.outputs.some((output: { assets: { tokenId: string }[] }) =>
-				output.assets?.some((asset: { tokenId: string }) => asset.tokenId === tokenId)
+			const hasInOutputs = tx.outputs.some((output) =>
+				output.assets?.some((asset) => asset.tokenId === tokenId)
 			);
 			return requireBothInputOutput ? hasInInputs && hasInOutputs : hasInInputs || hasInOutputs;
 		});
 	}
 
-	function checkForSpecialAddress(tx: any, addressList: string[]) {
+	function checkForSpecialAddress(tx: MempoolTx, addressList: string[]) {
 		return addressList.some((address) => {
-			const isInInputs = tx.inputs.some((input: { address: string }) => input.address === address);
-			const isInOutputs = tx.outputs.some(
-				(output: { address: string }) => output.address === address
-			);
+			const isInInputs = tx.inputs.some((input) => input.address === address);
+			const isInOutputs = tx.outputs.some((output) => output.address === address);
 			return isInInputs || isInOutputs;
 		});
 	}
 
-	function determineAddressBookLabels(tx: any) {
-		const labels = new Set();
-		const seenAddresses = new Set();
-
-		const customStyles = {
-			gold: 'bg-yellow-500/70',
-			mew: 'bg-purple-500/70',
-			duckpool: 'bg-yellow-500/70',
-			dex: 'bg-pink-500/70',
-			rosen: 'bg-orange-500/70',
-			sigusd: 'bg-blue-500/70',
-			default: 'bg-gray-500/30'
-		};
-
-		function getCustomStyle(label: string): string {
-			const lowerLabel = label.toLowerCase();
-
-			for (const [key, style] of Object.entries(customStyles)) {
-				if (lowerLabel.includes(key)) return style;
-			}
-
-			return customStyles.default;
-		}
+	function determineAddressBookLabels(tx: MempoolTx, addressBookAddresses: AddressBook) {
+		const labels = new Set<Label>();
+		const seenAddresses = new Set<string | undefined>([FEE_ADDRESS]);
 
 		// Add Sky Harbor price label if applicable
-		const skyharbourPrice = extractSkyharbourPrice(tx);
+		const skyharbourPrice = extractSkyharbourPrice(tx, addressBookAddresses);
 		if (skyharbourPrice) {
 			labels.add({
 				label: `Sky Harbor`,
@@ -195,7 +232,7 @@
 		[...tx.inputs, ...tx.outputs].forEach((box) => {
 			if (!seenAddresses.has(box.address)) {
 				seenAddresses.add(box.address);
-				const addressInfo = addressBookAddresses.get(box.address);
+				const addressInfo = addressBookAddresses.get(box.address!);
 
 				if (addressInfo && !EXCLUDED_LABELS.includes(addressInfo.name)) {
 					let label = addressInfo.name;
@@ -208,7 +245,7 @@
 						label = 'Dex Trade';
 					}
 
-					const style = getCustomStyle(label);
+					const style = getCustomStyle(label, addressInfo.type);
 
 					labels.add({
 						label,
@@ -218,13 +255,16 @@
 			}
 		});
 
-		return Array.from(labels) as { label: string; style: string }[];
+		return Array.from(labels);
 	}
 
-	function extractSkyharbourPrice(transaction: any): string | null {
+	function extractSkyharbourPrice(
+		transaction: MempoolTx,
+		addressBookAddresses: AddressBook
+	): string | null {
 		// Look for outputs with Sky Harbor address
-		const skyharbourOutput = transaction.outputs.find((output: any) => {
-			const addressInfo = addressBookAddresses.get(output.address);
+		const skyharbourOutput = transaction.outputs.find((output: Box) => {
+			const addressInfo = addressBookAddresses.get(output.address!);
 			return addressInfo && addressInfo.name === 'Sky Harbor';
 		});
 
@@ -245,21 +285,6 @@
 		}
 		return null;
 	}
-
-	onMount(() => {
-		const addressBookUnsub = addressBook.subscribe((newAddressBook) => {
-			addressBookAddresses.clear();
-			Object.entries(newAddressBook).forEach(([key, value]) => {
-				addressBookAddresses.set(key, value);
-			});
-		});
-
-		updateLabels();
-
-		return () => {
-			addressBookUnsub();
-		};
-	});
 </script>
 
 {#if txLabels.length > 0}

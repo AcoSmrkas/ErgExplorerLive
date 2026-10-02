@@ -8,6 +8,7 @@
 	import Loading from '$lib/components/Loading.svelte';
 	import type { Socket } from 'socket.io-client';
 	import { fetchAddressBook } from '$lib/common/utils';
+	import { loadContractTemplates } from '$lib/common/contracts';
 
 	let { children } = $props();
 	let socketConnected = $state(false);
@@ -19,9 +20,8 @@
 			socketConnected = !!value?.connected;
 		});
 
-		(async () => {
-			await fetchAddressBook();
-		})();
+		fetchAddressBook();
+		loadContractTemplates();
 
 		return () => {
 			unsubscribe();

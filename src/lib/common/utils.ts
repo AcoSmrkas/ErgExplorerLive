@@ -1,28 +1,27 @@
-import axios from 'axios';
 import BigNumber from 'bignumber.js';
 import { get } from 'svelte/store';
-import { EXPLORER_API, ERGEXPLORER_API } from '$lib/common/const';
-import {
-	mempoolTxs,
-	tempBoxData,
-	assetInfos,
-	fetchingAssetData,
-	fetchingBoxData,
-	addressBook
-} from '$lib/store/store';
+import { ERGEXPLORER_API } from '$lib/common/const';
+import { assetInfos, addressBook } from '$lib/store/store';
 import { ErgoAddress } from '@fleet-sdk/core';
 
+type TransferBox = {
+	address?: string;
+	value?: number;
+	assets?: { tokenId: string; amount: number; decimals?: number }[];
+};
+
+export type Transfer = {
+	id: string;
+	tokenId: string;
+	decimals: number;
+	amount: BigNumber;
+	minted: BigNumber;
+	burned: BigNumber;
+};
+
 export function trackNetAssetTransfers(thisTransaction: {
-	inputs: {
-		address?: string;
-		value?: number;
-		assets?: { tokenId: string; amount: number; decimals: number }[];
-	}[];
-	outputs: {
-		address?: string;
-		value?: number;
-		assets?: { tokenId: string; amount: number; decimals: number }[];
-	}[];
+	inputs: TransferBox[];
+	outputs: TransferBox[];
 }) {
 	// Step 1: Create maps to track assets by address and total amounts
 	const inputsByAddress = new Map<string, Map<string, BigNumber>>();
@@ -60,7 +59,7 @@ export function trackNetAssetTransfers(thisTransaction: {
 
 		// Process other assets
 		if (input.assets) {
-			input.assets.forEach((asset: { tokenId: string; amount: number; decimals: number }) => {
+			input.assets.forEach((asset) => {
 				if (!asset.tokenId) return;
 
 				// Store decimals info
@@ -107,7 +106,7 @@ export function trackNetAssetTransfers(thisTransaction: {
 
 		// Process other assets
 		if (output.assets) {
-			output.assets.forEach((asset: { tokenId: string; amount: number; decimals: number }) => {
+			output.assets.forEach((asset) => {
 				if (!asset.tokenId) return;
 
 				// Store decimals info
@@ -129,16 +128,7 @@ export function trackNetAssetTransfers(thisTransaction: {
 	});
 
 	// Step 4: Calculate transfers between different addresses
-	const transferredAssets: {
-		[tokenId: string]: {
-			id: string;
-			tokenId: string;
-			decimals: number;
-			amount: BigNumber;
-			minted: BigNumber;
-			burned: BigNumber;
-		};
-	} = {};
+	const transferredAssets: { [tokenId: string]: Transfer } = {};
 
 	// First, identify all tokens in the transaction
 	const allTokens = new Set<string>();
@@ -209,25 +199,29 @@ export function trackNetAssetTransfers(thisTransaction: {
 
 export async function getAssetInfos(ids: Array<string>) {
 	const assets = get(assetInfos) as { [key: string]: unknown };
-	const assetIds = Object.keys(assets as object);
 
-	ids = ids.filter((id) => !assetIds.includes(id));
+	ids = ids.filter((id) => !(id in assets));
 
 	if (ids.length == 0) return;
 
-	fetchingAssetData.set(true);
+	try {
+		const response = await fetch(`${ERGEXPLORER_API}tokens/byId`, {
+			method: 'POST',
+			headers: { 'content-type': 'application/json' },
+			body: JSON.stringify({ ids: ids }),
+			signal: AbortSignal.timeout(10000)
+		});
+		const newData = (await response.json()).items;
 
-	const response = await axios.post(`${ERGEXPLORER_API}tokens/byId`, { ids: ids });
+		for (const data of newData) {
+			assets[data.id] = data;
+		}
 
-	fetchingAssetData.set(false);
-
-	const newData = response.data.items;
-
-	for (const data of newData) {
-		assets[data.id] = data;
+		assetInfos.set(assets);
+	} catch (error) {
+		// Tiles show token ids, and pick the names up when a later lookup succeeds.
+		console.error('Token info lookup failed:', error);
 	}
-
-	assetInfos.set(assets);
 }
 
 export function collectTokenIds(
@@ -257,130 +251,26 @@ export function truncateAddress(address: string, len: number) {
 	return `${address.substring(0, len)}...${address.substring(address.length - len)}`;
 }
 
-export function cleanupTempBoxData() {
-	const currentBoxData = get(tempBoxData) as unknown as { [key: string]: unknown };
-	const currentTransactions = get(mempoolTxs);
-
-	const keys = Object.keys(currentBoxData);
-	for (let i = keys.length - 1; i >= 0; i--) {
-		const boxData = currentBoxData[i] as { boxId: string; tranactionId: string };
-
-		if (
-			!(currentTransactions as { id: string }[]).find((item) => item.id === boxData.tranactionId)
-		) {
-			delete currentBoxData[boxData.boxId];
-		}
-	}
-}
-
-export function getBoxDataById(boxId: string) {
-	const currentBoxData = get(tempBoxData) as unknown as { [key: string]: unknown };
-
-	if (currentBoxData[boxId] !== undefined) {
-		return currentBoxData[boxId];
-	}
-
-	const txs = get(mempoolTxs);
-
-	let box = null;
-
-	for (const mTx of txs as { outputs: { boxId: string }[] }[]) {
-		const outputs = mTx.outputs;
-		for (const o of outputs) {
-			if (o.boxId == boxId) {
-				box = o;
-			}
-		}
-	}
-
-	return box;
-}
-
-export function resolveBoxFromMempool(boxId: string, txs: Array<unknown>) {
-	const currentBoxData = get(tempBoxData) as unknown as { [key: string]: unknown };
-
-	let box = null;
-	for (const mTx of txs as { outputs: { boxId: string }[] }[]) {
-		const outputs = mTx.outputs;
-		for (const o of outputs) {
-			if (o.boxId == boxId) {
-				box = o;
-			}
-		}
-	}
-
-	if (box) {
-		currentBoxData[box.boxId] = box;
-
-		tempBoxData.set(currentBoxData);
-	}
-}
-
-export async function resolveBoxById(boxId: string) {
-	const currentBoxData = get(tempBoxData) as unknown as { [key: string]: unknown };
-	let box = null;
-
-	if (currentBoxData[boxId] !== undefined) {
-		return currentBoxData[boxId];
-	}
-
-	try {
-		const boxData = await axios.get(`${EXPLORER_API}boxes/${boxId}`);
-
-		if (boxData.data) {
-			box = boxData.data;
-		}
-	} catch {
-		box = null;
-	}
-
-	if (box !== null) {
-		currentBoxData[box.boxId] = box;
-
-		tempBoxData.set(currentBoxData);
-	}
-
-	return box;
-}
-
-export function resolveTxBoxes(tx: unknown) {
-	const proxyTx = JSON.parse(JSON.stringify(tx));
-
-	for (let i = 0; i < proxyTx.outputs.length; i++) {
-		const output = proxyTx.outputs[i];
-
-		proxyTx.outputs[i].address = ergoTreeToAddress(output.ergoTree);
-	}
-
-	for (let i = 0; i < proxyTx.inputs.length; i++) {
-		const input = proxyTx.inputs[i];
-
-		const boxData = getBoxDataById(input.boxId);
-
-		if (boxData) {
-			proxyTx.inputs[i] = boxData;
-			proxyTx.inputs[i].address = ergoTreeToAddress(proxyTx.inputs[i].ergoTree);
-		}
-	}
-
-	return proxyTx;
-}
-
-export async function getBoxInfos(ids: Array<string>, txs: Array<unknown>) {
-	if (ids.length === 0) return [];
-
-	fetchingBoxData.set(true);
-
-	await Promise.all(ids.map((id) => resolveBoxFromMempool(id, txs)));
-	const result = await Promise.all(ids.map((id) => resolveBoxById(id)));
-
-	fetchingBoxData.set(false);
-
-	return result;
-}
+// The same contracts (DEX pools, oracles, bots) recur in most txs, and decoding is the
+// slow part of building one.
+const addresses = new Map<string, string>();
 
 export function ergoTreeToAddress(ergoTree: string) {
-	return ErgoAddress.fromErgoTree(ergoTree).toString();
+	let address = addresses.get(ergoTree);
+
+	if (address === undefined) {
+		try {
+			address = ErgoAddress.fromErgoTree(ergoTree).toString();
+		} catch {
+			// Still groups the tx's boxes by script for the transfer totals.
+			address = ergoTree;
+		}
+
+		if (addresses.size >= 5000) addresses.clear();
+		addresses.set(ergoTree, address);
+	}
+
+	return address;
 }
 
 function getDecimals(value: string | number, additional = 1): number {

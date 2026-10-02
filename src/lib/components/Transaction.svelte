@@ -2,55 +2,22 @@
 	import { BigNumber } from 'bignumber.js';
 	import { fade } from 'svelte/transition';
 	import { ERGEXPLORER_URL } from '$lib/common/const';
-	import { onMount } from 'svelte';
-	import { nFormatter, resolveTxBoxes, trackNetAssetTransfers } from '$lib/common/utils';
+	import { nFormatter } from '$lib/common/utils';
+	import type { MempoolTx } from '$lib/common/mempool';
 	import Box from '$lib/components/Box.svelte';
 	import Asset from './Asset.svelte';
-	import SmallLoading from '$lib/components/SmallLoading.svelte';
 	import ErgExplorerLink from './ErgExplorerLink.svelte';
 	import TxLabel from './TxLabel.svelte';
 
-	let { transaction } = $props();
-	let thisTransaction: any = $state({});
+	let { transaction }: { transaction: MempoolTx } = $props();
 	let showBoxDetails = $state(false);
 	let showCoolBoxDetails = $state(true);
-	let assets: { [key: string]: { tokenId: string; decimals: number; amount: any; name?: string } } =
-		$state({});
 	let totalValue: BigNumber = $derived(
-		transaction.outputs.reduce(
-			(total: BigNumber, output: any) => total.plus(output.value),
-			new BigNumber(0)
-		)
+		transaction.outputs.reduce((total, output) => total.plus(output.value), new BigNumber(0))
 	);
-
-	$effect(() => {
-		setTimeout(updateAssets, 0);
-	});
-
-	function updateAssets() {
-		const proxyTx = resolveTxBoxes(transaction);
-
-		assets = {};
-		const uniqueAssets = trackNetAssetTransfers(proxyTx);
-		Object.values(uniqueAssets).forEach((item) => {
-			if (
-				item.amount.toNumber() !== 0 ||
-				item.burned.toNumber() !== 0 ||
-				item.minted.toNumber() !== 0
-			) {
-				assets[item.tokenId] = item;
-			}
-		});
-
-		thisTransaction = proxyTx;
-	}
-
-	onMount(() => {
-		thisTransaction = JSON.parse(JSON.stringify(transaction));
-	});
 </script>
 
-<a target="_new" href={`${ERGEXPLORER_URL}transactions#${thisTransaction.id}`}>
+<a target="_new" href={`${ERGEXPLORER_URL}transactions#${transaction.id}`}>
 	<div
 		class="tx-container rounded-md border-1 border-[#555] p-1"
 		out:fade|local={{ duration: 300 }}
@@ -59,7 +26,7 @@
 		<TxLabel {transaction} />
 
 		{#if !showCoolBoxDetails}
-			<p>ID: <ErgExplorerLink type="transactions" value={thisTransaction.id} /></p>
+			<p>ID: <ErgExplorerLink type="transactions" value={transaction.id} /></p>
 			<div class="flex">
 				<span
 					>Total value: {nFormatter(totalValue.dividedBy(10 ** 9).toNumber())}
@@ -75,25 +42,23 @@
 				<br />
 
 				<p>Inputs:</p>
-				{#each thisTransaction.inputs as box}
+				{#each transaction.inputs as box}
 					<Box {box} />
 				{/each}
 
 				<br />
 
 				<p>Outputs:</p>
-				{#each thisTransaction.outputs as box}
+				{#each transaction.outputs as box}
 					<Box {box} />
 				{/each}
 			{/if}
-		{:else if Object.keys(assets).length > 0}
+		{:else}
 			<div class="flex flex-wrap place-content-around align-start">
-				{#each Object.entries(assets) as [tokenId, asset]}
+				{#each transaction.transfers as asset (asset.tokenId)}
 					<Asset {asset} />
 				{/each}
 			</div>
-		{:else}
-			<SmallLoading />
 		{/if}
 	</div>
 </a>

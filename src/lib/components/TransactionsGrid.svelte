@@ -2,7 +2,7 @@
 	import Loading from './Loading.svelte';
 	import Transaction from '$lib/components/Transaction.svelte';
 	import { mempoolTxs, ready } from '$lib/store/store';
-	import { trackNetAssetTransfers, resolveTxBoxes } from '$lib/common/utils';
+	import type { MempoolTx } from '$lib/common/mempool';
 	import { onMount } from 'svelte';
 
 	import Grid from '$lib/svelte-grid/index.svelte';
@@ -12,7 +12,7 @@
 	const ROW_ASSETS = 4;
 
 	let container: Element | null = null;
-	let transactions: Array<any> = $state([]);
+	let transactions: MempoolTx[] = $state([]);
 	let colN = [1, 2, 3, 4, 6, 8, 10, 13];
 	let cols = [
 		[200, colN[0]],
@@ -29,12 +29,12 @@
 	onMount(() => {
 		container = document.getElementById('grid-container');
 
-		const mempoolTxsUnsubscribe = mempoolTxs.subscribe((value: any) => {
+		const mempoolTxsUnsubscribe = mempoolTxs.subscribe((value) => {
 			transactions = value;
 			updateLayout();
 		});
 
-		const resizeObserver = new ResizeObserver((entries) => {
+		const resizeObserver = new ResizeObserver(() => {
 			updateLayout();
 		});
 
@@ -63,99 +63,26 @@
 	}
 
 	function generateLayout(col: number) {
-		const layout = new Array(Object.keys(transactions).length).fill(null).map(function (item, i) {
-			const tx = transactions[Number(Object.keys(transactions)[i])];
-			const proxyTx = resolveTxBoxes(tx);
+		const rowAssets = col > 4 ? ROW_ASSETS + 1 : ROW_ASSETS;
+		const maxX = Math.min(col, rowAssets);
 
-			const uniqueAssets = trackNetAssetTransfers(proxyTx);
-			const assetCount = Object.values(uniqueAssets).filter(
-				(item) =>
-					item.amount.toNumber() !== 0 ||
-					item.burned.toNumber() !== 0 ||
-					item.minted.toNumber() !== 0
-			).length;
+		return transactions.map((tx) => {
+			const assetCount = tx.transfers.length;
+			const size = {
+				w: Math.max(1, Math.min(assetCount, maxX)),
+				h: Math.max(1, Math.ceil(assetCount / rowAssets)),
+				draggable: false,
+				resizable: false,
+				customDragger: false,
+				customResizer: false
+			};
 
-			let currentRowAssets = ROW_ASSETS;
-			if (col > 4) {
-				currentRowAssets++;
-			}
-			const maxX = col > currentRowAssets ? currentRowAssets : col;
-			const calculatedH = Math.ceil(assetCount / currentRowAssets);
-			const calculatedW = assetCount >= maxX ? maxX : assetCount;
-
-			item = {
-				[colN[0]]: {
-					w: calculatedW > 0 ? calculatedW : 1,
-					h: calculatedH > 0 ? calculatedH : 1,
-					draggable: false,
-					resizable: false,
-					customDragger: false,
-					customResizer: false
-				},
-				[colN[1]]: gridHelp.item({
-					w: calculatedW > 0 ? calculatedW : 1,
-					h: calculatedH > 0 ? calculatedH : 1,
-					draggable: false,
-					resizable: false,
-					customDragger: false,
-					customResizer: false
-				}),
-				[colN[2]]: gridHelp.item({
-					w: calculatedW > 0 ? calculatedW : 1,
-					h: calculatedH > 0 ? calculatedH : 1,
-					draggable: false,
-					resizable: false,
-					customDragger: false,
-					customResizer: false
-				}),
-				[colN[3]]: gridHelp.item({
-					w: calculatedW > 0 ? calculatedW : 1,
-					h: calculatedH > 0 ? calculatedH : 1,
-					draggable: false,
-					resizable: false,
-					customDragger: false,
-					customResizer: false
-				}),
-				[colN[4]]: gridHelp.item({
-					w: calculatedW > 0 ? calculatedW : 1,
-					h: calculatedH > 0 ? calculatedH : 1,
-					draggable: false,
-					resizable: false,
-					customDragger: false,
-					customResizer: false
-				}),
-				[colN[5]]: gridHelp.item({
-					w: calculatedW > 0 ? calculatedW : 1,
-					h: calculatedH > 0 ? calculatedH : 1,
-					draggable: false,
-					resizable: false,
-					customDragger: false,
-					customResizer: false
-				}),
-				[colN[6]]: gridHelp.item({
-					w: calculatedW > 0 ? calculatedW : 1,
-					h: calculatedH > 0 ? calculatedH : 1,
-					draggable: false,
-					resizable: false,
-					customDragger: false,
-					customResizer: false
-				}),
-				[colN[7]]: gridHelp.item({
-					w: calculatedW > 0 ? calculatedW : 1,
-					h: calculatedH > 0 ? calculatedH : 1,
-					draggable: false,
-					resizable: false,
-					customDragger: false,
-					customResizer: false
-				}),
+			return {
+				...Object.fromEntries(colN.map((n) => [n, gridHelp.item(size)])),
 				id: tx.id,
 				data: tx
 			};
-
-			return item;
 		});
-
-		return layout;
 	}
 </script>
 

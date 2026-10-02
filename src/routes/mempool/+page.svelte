@@ -9,20 +9,19 @@
 	let timeSinceLastBlock: string = $state('');
 
 	onMount(() => {
-		const nodeInfoUnsubscribe = nodeInfo.subscribe((value: any) => {
+		const nodeInfoUnsubscribe = nodeInfo.subscribe((value) => {
 			if (!value) return;
 
 			blockHeight = value.fullHeight;
 		});
 
-		setInterval(() => {
+		const timer = setInterval(() => {
 			timeSinceLastBlock = formatTimeDifference($lastBlockInfo?.timestamp);
 		}, 30);
 
 		return () => {
-			if (nodeInfoUnsubscribe) {
-				nodeInfoUnsubscribe();
-			}
+			clearInterval(timer);
+			nodeInfoUnsubscribe();
 		};
 	});
 </script>
