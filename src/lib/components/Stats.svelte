@@ -1,14 +1,15 @@
 <script lang="ts">
 	import { Tween } from 'svelte/motion';
 	import { cubicOut } from 'svelte/easing';
-	import BigNumber from 'bignumber.js';
 	import { BLOCK_TARGET_MS } from '$lib/common/const';
+	import { valueMoved } from '$lib/common/prices';
 	import { nFormatter } from '$lib/common/utils';
 	import NextBlockGauge from './NextBlockGauge.svelte';
 	import {
 		addressBook,
 		ergUsd,
 		lastBlockInfo,
+		mempoolFees,
 		mempoolTxCount,
 		mempoolTxs,
 		nodeInfo,
@@ -32,36 +33,12 @@
 
 	const height = counter(() => $nodeInfo?.fullHeight ?? 0);
 	const pending = counter(() => $mempoolTxCount);
+	// What the pending txs pay the next miner.
+	let fees = $derived($mempoolFees / 1e9);
+	const feesShown = counter(() => fees);
+	let feesUsd = $derived($ergUsd === null || fees === 0 ? null : fees * $ergUsd);
 
-	// What the pending txs send to other addresses: ERG, plus the tokens that have a
-	// price (valued in ERG). Minted and burned tokens aren't moved, so they don't count.
-	let motion = $derived.by(() => {
-		let erg = new BigNumber(0);
-		let tokenErg = 0;
-		let tokens = 0;
-
-		for (const tx of $mempoolTxs) {
-			for (const t of tx.transfers) {
-				if (t.tokenId === 'ERG') {
-					erg = erg.plus(t.amount);
-					continue;
-				}
-
-				const price = $tokenPrices.get(t.tokenId);
-				if (!price || t.amount.isZero()) continue;
-
-				tokenErg += t.amount.div(10 ** price.decimals).toNumber() * price.priceErg;
-				tokens++;
-			}
-		}
-
-		const ergMoved = erg.div(1e9).toNumber();
-		return {
-			erg: ergMoved,
-			tokens,
-			usd: $ergUsd === null ? null : (ergMoved + tokenErg) * $ergUsd
-		};
-	});
+	let motion = $derived(valueMoved($mempoolTxs, $tokenPrices, $ergUsd));
 	const ergShown = counter(() => motion.erg);
 	const usdShown = counter(() => motion.usd ?? 0);
 
@@ -106,10 +83,25 @@
 		</div>
 	</div>
 
-	<div class="panel stat">
-		<span class="label">Pending</span>
-		<span class="value mono">{nFormatter(Math.round(pending.current), 0, false)}</span>
-		<span class="sub">transactions waiting</span>
+	<div class="panel stat split">
+		<div class="half">
+			<span class="label">Pending</span>
+			<span class="value mono">{nFormatter(Math.round(pending.current), 0, false)}</span>
+			<span class="sub">waiting</span>
+		</div>
+		<div class="half">
+			<span class="label">Fees</span>
+			<span class="value mono">{nFormatter(feesShown.current, 4)}</span>
+			<span class="sub">
+				ERG<span class="usd"
+					>{feesUsd === null
+						? ''
+						: feesUsd < 0.01
+							? ' · <$0.01'
+							: ` · $${nFormatter(feesUsd, 2)}`}</span
+				>
+			</span>
+		</div>
 	</div>
 
 	<div class="panel stat">
@@ -180,6 +172,26 @@
 		text-overflow: ellipsis;
 	}
 
+	/* Two numbers side by side, under one panel. */
+	.split {
+		flex-direction: row;
+		gap: 0;
+		padding: 0;
+	}
+
+	.half {
+		flex: 1;
+		display: flex;
+		flex-direction: column;
+		gap: 4px;
+		min-width: 0;
+		padding: 14px 16px;
+	}
+
+	.half + .half {
+		border-left: 1px solid var(--border);
+	}
+
 	.timer {
 		flex-direction: row;
 		align-items: center;
@@ -204,8 +216,21 @@
 			gap: 8px;
 		}
 
-		.stat {
+		.stat,
+		.half {
 			padding: 12px;
+		}
+
+		.split {
+			padding: 0;
+		}
+
+		.split .value {
+			font-size: 1.05rem;
+		}
+
+		.usd {
+			display: none;
 		}
 
 		.timer {

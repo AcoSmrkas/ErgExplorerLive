@@ -1,4 +1,6 @@
+import BigNumber from 'bignumber.js';
 import { ERGEXPLORER_API } from '$lib/common/const';
+import type { MempoolTx } from '$lib/common/mempool';
 import { ergUsd, tokenPrices } from '$lib/store/store';
 
 // A token's price only counts with at least this much ERG in its pools; a thin pool's
@@ -39,4 +41,40 @@ async function refresh() {
 export function loadPrices() {
 	refresh();
 	setInterval(refresh, REFRESH_MS);
+}
+
+/**
+ * What txs send to other addresses: ERG, plus the tokens that have a price (valued in
+ * ERG). Minted and burned tokens aren't moved, so they don't count.
+ */
+export function valueMoved(
+	txs: MempoolTx[],
+	prices: Map<string, { priceErg: number; decimals: number }>,
+	usdPerErg: number | null
+) {
+	let erg = new BigNumber(0);
+	let tokenErg = 0;
+	let tokens = 0;
+
+	for (const tx of txs) {
+		for (const t of tx.transfers) {
+			if (t.tokenId === 'ERG') {
+				erg = erg.plus(t.amount);
+				continue;
+			}
+
+			const price = prices.get(t.tokenId);
+			if (!price || t.amount.isZero()) continue;
+
+			tokenErg += t.amount.div(10 ** price.decimals).toNumber() * price.priceErg;
+			tokens++;
+		}
+	}
+
+	const ergMoved = erg.div(1e9).toNumber();
+	return {
+		erg: ergMoved,
+		tokens,
+		usd: usdPerErg === null ? null : (ergMoved + tokenErg) * usdPerErg
+	};
 }

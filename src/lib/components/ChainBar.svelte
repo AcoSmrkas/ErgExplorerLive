@@ -1,13 +1,16 @@
 <script lang="ts">
 	import { flip } from 'svelte/animate';
 	import { fade } from 'svelte/transition';
-	import { ERGEXPLORER_URL } from '$lib/common/const';
+	import { page } from '$app/state';
 	import { land, reducedMotion } from '$lib/common/motion';
 	import { nFormatter } from '$lib/common/utils';
 	import { addressBook, mempoolTxCount, nodeInfo, now, recentBlocks } from '$lib/store/store';
 
 	// Oldest on the left, so the chain grows toward the next block.
 	let blocks = $derived([...$recentBlocks].reverse());
+
+	// The block open in the block view, if any; otherwise the live mempool is.
+	let viewing = $derived(page.params.height ? Number(page.params.height) : null);
 
 	// The next-block slot flashes when a block lands.
 	let flash = $state(false);
@@ -37,9 +40,9 @@
 				<a
 					class="block"
 					class:newest={i === blocks.length - 1}
-					href={`${ERGEXPLORER_URL}blocks/${block.id}`}
-					target="_blank"
-					rel="noopener"
+					class:current={block.height === viewing}
+					href={`/block/${block.height}`}
+					aria-current={block.height === viewing ? 'page' : undefined}
 					title="Mined by {$addressBook.get(block.miner.address)?.name ?? block.miner.name}"
 					animate:flip={{ duration: reducedMotion ? 0 : 500 }}
 					in:land
@@ -55,13 +58,21 @@
 			{/each}
 		</div>
 
-		<div id="next-block" class="next" class:flash>
+		<a
+			id="next-block"
+			class="next"
+			class:flash
+			class:current={viewing === null}
+			href="/"
+			aria-current={viewing === null ? 'page' : undefined}
+			title="Live mempool"
+		>
 			<span class="next-label">Next block</span>
 			<span class="height mono">
 				{$nodeInfo ? nFormatter($nodeInfo.fullHeight + 1, 0, false) : '…'}
 			</span>
 			<span class="meta"><b class="mono">{$mempoolTxCount}</b> pending</span>
-		</div>
+		</a>
 	</div>
 </footer>
 
@@ -144,6 +155,27 @@
 
 	.block.newest::after {
 		border-color: rgb(251 92 22 / 0.7);
+	}
+
+	/* The block open in the block view: lifted, outlined, with a marker underneath. */
+	.block.current {
+		transform: translateY(-3px);
+		border-color: var(--main-color);
+		box-shadow:
+			inset 0 0 0 1px var(--main-color),
+			0 10px 24px -12px rgb(251 92 22 / 0.7);
+	}
+
+	.block.current::before {
+		content: '';
+		position: absolute;
+		left: 50%;
+		bottom: -9px;
+		width: 18px;
+		height: 3px;
+		margin-left: -9px;
+		border-radius: 3px;
+		background: var(--main-color);
 	}
 
 	.height {

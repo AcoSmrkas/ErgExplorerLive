@@ -26,12 +26,12 @@ export function arrive(node: Element, { index = 0, first = false } = {}): Transi
 
 /**
  * A tile leaving the mempool flies into the next-block slot of the chain bar, shrinking
- * on the way: its tx is in the block that was just mined.
+ * on the way: its tx is in the block that was just mined. A block's tiles only fade.
  */
-export function intoBlock(node: Element, { index = 0 } = {}): TransitionConfig {
+export function intoBlock(node: Element, { index = 0, fly = true } = {}): TransitionConfig {
 	const target = document.getElementById('next-block');
 
-	if (reducedMotion || leavingFor === 'filter' || !target) {
+	if (reducedMotion || !fly || leavingFor === 'filter' || !target) {
 		return { duration: 180, css: (t) => `opacity: ${t}` };
 	}
 

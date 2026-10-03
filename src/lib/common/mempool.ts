@@ -8,7 +8,7 @@ import {
 	trackNetAssetTransfers,
 	type Transfer
 } from '$lib/common/utils';
-import { mempoolTxCount, mempoolTxs, nodeInfo, ready } from '$lib/store/store';
+import { mempoolFees, mempoolTxCount, mempoolTxs, nodeInfo, ready } from '$lib/store/store';
 
 export type Box = {
 	boxId: string;
@@ -30,6 +30,8 @@ export type MempoolTx = {
 	outputs: Box[];
 	/** Net movement of ERG and each token, without the zero ones. */
 	transfers: Transfer[];
+	/** nanoERG paid to the miner. */
+	fee: number;
 	/** Spends a box that went unspent for four years, claiming its storage rent. */
 	storageRent: boolean;
 	/** Who paid: see parties(). */
@@ -83,7 +85,9 @@ async function apply(txs: RawTx[]) {
 	// and waits for the node's cleanup. mempool-socket's API and ErgExplorer hide these too.
 	const live = txs.filter((tx) => tx.inputs.every((input) => input.ergoTree));
 
-	const fresh = live.filter((tx) => !built.has(tx.id)).map(build);
+	// The tx goes in the next block, so storage rent is counted from it.
+	const height = (get(nodeInfo)?.fullHeight ?? Infinity) + 1;
+	const fresh = live.filter((tx) => !built.has(tx.id)).map((tx) => buildTx(tx, height, applied));
 	// Token names, decimals and icons, before the new tiles render.
 	await getAssetInfos(collectTokenIds(fresh));
 	for (const tx of fresh) built.set(tx.id, tx);
@@ -100,13 +104,15 @@ async function apply(txs: RawTx[]) {
 
 	mempoolTxs.set([...shown, ...added]);
 	mempoolTxCount.set(live.length);
+	mempoolFees.set(live.reduce((sum, tx) => sum + built.get(tx.id)!.fee, 0));
 	ready.set(true);
 	applied = true;
 
 	if (txs.length >= BROADCAST_LIMIT) void fetchPoolSize();
 }
 
-function build(tx: RawTx): MempoolTx {
+/** A tx as the cards show it, pending or in a block of the given height. */
+export function buildTx(tx: RawTx, height: number, fresh = false): MempoolTx {
 	const resolve = (box: Box): Box => ({
 		boxId: box.boxId,
 		value: box.value,
@@ -124,9 +130,12 @@ function build(tx: RawTx): MempoolTx {
 	return {
 		...resolved,
 		transfers,
-		storageRent: tx.inputs.some(isStorageRentSpend),
+		fee: resolved.outputs
+			.filter((box) => box.address === FEE_ADDRESS)
+			.reduce((sum, box) => sum + Number(box.value), 0),
+		storageRent: tx.inputs.some((input) => isStorageRentSpend(input, height)),
 		...parties(resolved),
-		fresh: applied
+		fresh
 	};
 }
 
@@ -182,11 +191,9 @@ function parties(tx: { inputs: Box[]; outputs: Box[] }): Pick<MempoolTx, 'from' 
 
 /**
  * The rent path: no proof, and context variable #127 naming the output that
- * recreates the box. The tx goes in the next block, so the age is counted from it.
+ * recreates the box, at least four years after the box was created.
  */
-function isStorageRentSpend(input: Box) {
-	const height = (get(nodeInfo)?.fullHeight ?? Infinity) + 1;
-
+function isStorageRentSpend(input: Box, height: number) {
 	return (
 		!input.spendingProof?.proofBytes &&
 		input.spendingProof?.extension?.['127'] !== undefined &&
@@ -196,17 +203,18 @@ function isStorageRentSpend(input: Box) {
 
 /**
  * The broadcast stops at the node's first page, so a full pool would always read 50.
- * mempool-socket's API counts the whole pool, leaving out dead txs as above.
+ * mempool-socket's API counts the whole pool and its fees, leaving out dead txs as above.
  */
 async function fetchPoolSize() {
 	try {
 		const res = await fetch(`${SOCKET_URL}/api/v1/mempool/stats`, {
 			signal: AbortSignal.timeout(5000)
 		});
-		const { transactions } = await res.json();
+		const { transactions, fees } = await res.json();
 		if (Number.isFinite(transactions)) {
 			mempoolTxCount.set(Math.max(transactions, get(mempoolTxs).length));
 		}
+		if (Number.isFinite(fees)) mempoolFees.update((shown) => Math.max(fees, shown));
 	} catch {
 		// Keep the count of what is shown.
 	}

@@ -1,4 +1,4 @@
-import { FEE_ADDRESS } from '$lib/common/const';
+import { EMISSION_ADDRESS, FEE_ADDRESS } from '$lib/common/const';
 import type { ContractDetector } from '$lib/common/contracts';
 import type { Box, MempoolTx } from '$lib/common/mempool';
 import { shortAddress } from '$lib/common/utils';
@@ -109,14 +109,24 @@ const hasToken = (boxes: Box[], tokenId: string) =>
 	boxes.some((box) => box.assets?.some((asset) => asset.tokenId === tokenId));
 
 /**
- * The one label a tx is shown with: storage rent, then the special cases above, then
- * the address book, then the contracts ErgExplorer knows by template, then "Transfer".
+ * The one label a tx is shown with: a block's own txs, storage rent, then the special
+ * cases above, then the address book, then the contracts ErgExplorer knows by
+ * template, then "Transfer".
  */
 export function labelTx(
 	tx: MempoolTx,
 	book: AddressBook,
 	detectContract: ContractDetector | null
 ): Label {
+	// Every block opens with the miner's reward and usually ends with the miner
+	// collecting the fees. Both only appear in blocks, never in the mempool.
+	if (tx.inputs.some((box) => box.address === EMISSION_ADDRESS)) {
+		return labelled('Block reward', 'Mining pool');
+	}
+	if (tx.inputs.every((box) => box.address === FEE_ADDRESS)) {
+		return labelled('Miner fees', 'Mining pool');
+	}
+
 	if (tx.storageRent) return labelled('Storage Rent', 'Storage Rent');
 
 	const boxes = [...tx.inputs, ...tx.outputs];
@@ -173,6 +183,10 @@ export function labelTx(
 
 /** What to call an address: its address book name, its contract, or the address shortened. */
 export function nameOf(box: Box, book: AddressBook, detectContract: ContractDetector | null) {
+	// The book calls both plain "Ergo Platform".
+	if (box.address === EMISSION_ADDRESS) return 'Emission';
+	if (box.address === FEE_ADDRESS) return 'Miner fees';
+
 	const entry = book.get(box.address!);
 	if (entry) return entry.name;
 

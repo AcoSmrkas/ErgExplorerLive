@@ -54,17 +54,21 @@
 	aria-label="{label.label} transaction {tx.id}"
 >
 	<div class="top">
-		<span class="tag"><span class="dot"></span>{label.label}</span>
-		<svg class="go" viewBox="0 0 16 16" width="12" height="12" aria-hidden="true">
-			<path
-				d="M5 3h8v8M13 3 4 12"
-				fill="none"
-				stroke="currentColor"
-				stroke-width="1.8"
-				stroke-linecap="round"
-				stroke-linejoin="round"
-			/>
-		</svg>
+		<span class="tag" title={label.label}><span class="dot"></span>{label.label}</span>
+		<!-- Enough of the id to find a tx by; the full id is in the tooltip and on ErgExplorer. -->
+		<span class="txid mono" title={tx.id}>
+			<span>{tx.id.slice(0, 4)}<span class="wide">{tx.id.slice(4, 6)}</span>…{tx.id.slice(-4)}</span>
+			<svg class="go" viewBox="0 0 16 16" width="10" height="10" aria-hidden="true">
+				<path
+					d="M5 3h8v8M13 3 4 12"
+					fill="none"
+					stroke="currentColor"
+					stroke-width="1.8"
+					stroke-linecap="round"
+					stroke-linejoin="round"
+				/>
+			</svg>
+		</span>
 	</div>
 
 	{#if lead}
@@ -210,20 +214,29 @@
 		box-shadow: 0 0 8px var(--accent);
 	}
 
+	.txid {
+		flex: none;
+		display: inline-flex;
+		align-items: center;
+		gap: 4px;
+		font-size: 0.68rem;
+		color: var(--faint);
+		white-space: nowrap;
+		transition: color 0.2s;
+	}
+
+	.card:hover .txid {
+		color: var(--text);
+	}
+
 	.go {
 		flex: none;
-		color: var(--faint);
-		opacity: 0;
-		transform: translate(-3px, 3px);
-		transition:
-			opacity 0.2s,
-			transform 0.2s;
+		opacity: 0.5;
+		transition: opacity 0.2s;
 	}
 
 	.card:hover .go {
 		opacity: 1;
-		transform: none;
-		color: var(--text);
 	}
 
 	.lead {
@@ -381,6 +394,21 @@
 		.route {
 			gap: 4px;
 			font-size: 0.66rem;
+		}
+
+		/* A narrow card puts the id under a label that doesn't leave it room. */
+		.top {
+			flex-wrap: wrap;
+			row-gap: 5px;
+		}
+
+		.txid {
+			font-size: 0.62rem;
+		}
+
+		.txid .wide,
+		.go {
+			display: none;
 		}
 	}
 </style>

@@ -1,6 +1,12 @@
 <script lang="ts">
 	import { ERGEXPLORER_URL } from '$lib/common/const';
 	import { connected } from '$lib/store/store';
+
+	// Before the first connection there is nothing to reconnect to.
+	let wasConnected = $state(false);
+	$effect(() => {
+		if ($connected) wasConnected = true;
+	});
 </script>
 
 <header class="header">
@@ -8,10 +14,10 @@
 		<a href="/" class="brand" aria-label="Erg Explorer Live">
 			<img src="https://ergexplorer.com/images/logo.png" alt="" width="36" height="36" />
 			<span class="name">Erg Explorer</span>
-			<!-- Doubles as the connection status: amber while the socket reconnects. -->
+			<!-- Doubles as the connection status: amber until the socket (re)connects. -->
 			<span class="live" class:offline={!$connected} aria-live="polite">
 				<span class="dot"></span>
-				{$connected ? 'LIVE' : 'RECONNECTING'}
+				{$connected ? 'LIVE' : wasConnected ? 'RECONNECTING' : 'CONNECTING'}
 			</span>
 		</a>
 

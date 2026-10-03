@@ -1,6 +1,7 @@
 import { get } from 'svelte/store';
-import { EXPLORER_URLS } from '$lib/common/const';
-import { recentBlocks, type Block } from '$lib/store/store';
+import { EXPLORER_URLS, NODE_URLS } from '$lib/common/const';
+import type { RawTx } from '$lib/common/mempool';
+import { nodeInfo, recentBlocks, type Block } from '$lib/store/store';
 
 // Enough to fill the chain bar on a wide screen.
 const LIMIT = 16;
@@ -32,4 +33,47 @@ export async function refreshBlocks(height: number, attempt = 0) {
 			// Try the next explorer.
 		}
 	}
+}
+
+export type BlockHeader = {
+	id: string;
+	parentId: string;
+	height: number;
+	timestamp: number;
+};
+
+/**
+ * A block with every tx in it, each input carrying its full box, from an indexed
+ * node: the same shape the socket sends for pending txs. null when no node has a
+ * block at that height, i.e. it hasn't been mined yet.
+ */
+export async function fetchBlock(
+	height: number
+): Promise<{ header: BlockHeader; transactions: RawTx[] } | null> {
+	const tip = get(nodeInfo)?.fullHeight;
+	if (tip && height > tip) return null;
+
+	let lastError: unknown = null;
+
+	for (const base of NODE_URLS) {
+		try {
+			const options = { signal: AbortSignal.timeout(15000) };
+
+			const ids: string[] = await (await fetch(`${base}/blocks/at/${height}`, options)).json();
+			// Our node started from a snapshot and has no old blocks: ask the next one.
+			if (ids.length === 0) continue;
+
+			// The first id is the block on the best chain.
+			const res = await fetch(`${base}/blockchain/block/byHeaderId/${ids[0]}`, options);
+			if (!res.ok) throw new Error(`HTTP ${res.status}`);
+
+			return await res.json();
+		} catch (error) {
+			// Try the next node.
+			lastError = error;
+		}
+	}
+
+	if (lastError) throw lastError;
+	return null;
 }

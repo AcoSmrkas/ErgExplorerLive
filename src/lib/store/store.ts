@@ -24,6 +24,8 @@ export const nodeInfo: Writable<{
 }> = writable();
 export const recentBlocks: Writable<Block[]> = writable([]);
 export const mempoolTxCount: Writable<number> = writable(0);
+/** nanoERG the pending txs pay in miner fees. */
+export const mempoolFees: Writable<number> = writable(0);
 /** Dollars per ERG, once known. */
 export const ergUsd: Writable<number | null> = writable(null);
 /** Price in ERG of one whole token, for tokens with real liquidity. */

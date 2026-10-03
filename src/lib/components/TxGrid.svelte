@@ -5,7 +5,16 @@
 	import { arrive, intoBlock, reducedMotion } from '$lib/common/motion';
 	import TxCard from './TxCard.svelte';
 
-	let { items, ready }: { items: { tx: MempoolTx; label: Label }[]; ready: boolean } = $props();
+	let {
+		items,
+		ready,
+		live = true
+	}: {
+		items: { tx: MempoolTx; label: Label }[];
+		ready: boolean;
+		/** The mempool, whose tiles fly into the next block. A mined block's just fade. */
+		live?: boolean;
+	} = $props();
 </script>
 
 <div class="grid">
@@ -14,7 +23,7 @@
 			class="cell"
 			animate:flip={{ duration: reducedMotion ? 0 : 480 }}
 			in:arrive={{ index, first: !item.tx.fresh }}
-			out:intoBlock={{ index }}
+			out:intoBlock={{ index, fly: live }}
 		>
 			<TxCard tx={item.tx} label={item.label} />
 		</div>
@@ -27,7 +36,7 @@
 	{/if}
 </div>
 
-{#if ready && items.length === 0}
+{#if ready && items.length === 0 && live}
 	<div class="empty">
 		<div class="pulse" aria-hidden="true"></div>
 		<p>The mempool is empty.</p>
