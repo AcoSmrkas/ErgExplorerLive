@@ -7,3 +7,12 @@
   RewriteCond %{REQUEST_FILENAME} !-d
   RewriteRule ^.*$ /200.html [L,QSA]
 </IfModule>
+
+# The HTML names the current build's chunks, so browsers must check it on every load;
+# without a Cache-Control they keep it for hours and ask for chunks a deploy removed.
+# The chunks themselves are named by their content hash and never change.
+<IfModule mod_headers.c>
+  <FilesMatch "\.html$">
+    Header set Cache-Control "no-cache"
+  </FilesMatch>
+</IfModule>
