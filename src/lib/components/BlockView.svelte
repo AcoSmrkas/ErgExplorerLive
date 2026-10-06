@@ -70,13 +70,17 @@
 	);
 
 	// The reward goes to the miner's address: whatever the first tx pays that isn't
-	// the emission contract.
+	// the emission contract. In a Lithos block that key is the lender whose collateral
+	// the block spent, not whoever found it.
 	let miner = $derived.by(() => {
 		const reward = block?.txs.find((tx) =>
 			tx.inputs.some((box) => box.address === EMISSION_ADDRESS)
 		);
 		const box = reward?.outputs.find((box) => box.address !== EMISSION_ADDRESS);
-		return box ? nameOf(box, $addressBook, $contractDetector) : '';
+		const name = box ? nameOf(box, $addressBook, $contractDetector) : '';
+		const lithos = labelled.some((item) => item.label.label === 'Lithos Genesis');
+
+		return lithos ? `Lithos · reward to lender ${name}` : name;
 	});
 
 	let fees = $derived((block?.txs ?? []).reduce((sum, tx) => sum + tx.fee, 0) / 1e9);

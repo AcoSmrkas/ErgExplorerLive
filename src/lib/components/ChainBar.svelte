@@ -2,6 +2,7 @@
 	import { flip } from 'svelte/animate';
 	import { fade } from 'svelte/transition';
 	import { page } from '$app/state';
+	import { lithosHeights } from '$lib/common/lithos';
 	import { land, reducedMotion } from '$lib/common/motion';
 	import { nFormatter } from '$lib/common/utils';
 	import { addressBook, mempoolTxCount, nodeInfo, now, recentBlocks } from '$lib/store/store';
@@ -37,17 +38,22 @@
 	<div class="inner">
 		<div class="blocks">
 			{#each blocks as block, i (block.height)}
+				{@const lithos = $lithosHeights.has(block.height)}
 				<a
 					class="block"
 					class:newest={i === blocks.length - 1}
 					class:current={block.height === viewing}
+					class:lithos
 					href={`/block/${block.height}`}
 					aria-current={block.height === viewing ? 'page' : undefined}
-					title="Mined by {$addressBook.get(block.miner.address)?.name ?? block.miner.name}"
+					title={lithos
+						? 'Mined through the Lithos pool'
+						: `Mined by ${$addressBook.get(block.miner.address)?.name ?? block.miner.name}`}
 					animate:flip={{ duration: reducedMotion ? 0 : 500 }}
 					in:land
 					out:fade={{ duration: 200 }}
 				>
+					{#if lithos}<span class="pool">Lithos</span>{/if}
 					<span class="height mono">{nFormatter(block.height, 0, false)}</span>
 					<span class="meta">
 						<b class="mono">{block.transactionsCount}</b>
@@ -155,6 +161,28 @@
 
 	.block.newest::after {
 		border-color: rgb(251 92 22 / 0.7);
+	}
+
+	/* A Lithos block, in the purple of the LIT token icon. */
+	.block.lithos {
+		border-color: rgb(136 48 248 / 0.6);
+	}
+
+	/* Sits on the top border, clear of the height. */
+	.pool {
+		position: absolute;
+		top: -8px;
+		left: 10px;
+		padding: 0 5px;
+		border: 1px solid rgb(136 48 248 / 0.65);
+		border-radius: 5px;
+		background: #160f22;
+		font-size: 0.55rem;
+		font-weight: 800;
+		line-height: 14px;
+		letter-spacing: 0.08em;
+		text-transform: uppercase;
+		color: #a46cff;
 	}
 
 	/* The block open in the block view: lifted, outlined, with a marker underneath. */

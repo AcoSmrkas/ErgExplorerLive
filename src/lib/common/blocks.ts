@@ -1,5 +1,6 @@
 import { get } from 'svelte/store';
 import { EXPLORER_URLS, NODE_URLS } from '$lib/common/const';
+import { refreshLithosHeights } from '$lib/common/lithos';
 import type { RawTx } from '$lib/common/mempool';
 import { nodeInfo, recentBlocks, type Block } from '$lib/store/store';
 
@@ -22,7 +23,10 @@ export async function refreshBlocks(height: number, attempt = 0) {
 			const newest = items[0]?.height ?? 0;
 
 			// An answer that arrives after a newer one doesn't roll the bar back.
-			if (newest >= (get(recentBlocks)[0]?.height ?? 0)) recentBlocks.set(items);
+			if (newest >= (get(recentBlocks)[0]?.height ?? 0)) {
+				recentBlocks.set(items);
+				void refreshLithosHeights(items[items.length - 1]?.height ?? newest);
+			}
 
 			if (newest < height && attempt < 3) {
 				setTimeout(() => refreshBlocks(height, attempt + 1), 4000);

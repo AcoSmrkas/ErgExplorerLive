@@ -11,6 +11,8 @@ const GROUP_COLORS: { [group: string]: string } = {
 	'Storage Rent': '#f43f5e',
 	Transfers: '#8b8b94',
 	'Mining pools': '#f59e0b',
+	// The purple of the LIT token icon (#8830f8), lightened to read as text on the dark cards.
+	Lithos: '#a46cff',
 	Exchanges: '#2dd4bf',
 	Oracles: '#60a5fa',
 	DEX: '#f472b6',
@@ -29,7 +31,11 @@ const KEYWORD_GROUPS: [string, string][] = [
 	['dex', 'DEX'],
 	['spectrum', 'DEX'],
 	['crux', 'DEX'],
-	['lithos', 'DEX'],
+	// LithosDex and Lithos Lock trade and stake LIT; the rest of Lithos is its mining pool.
+	['lithos lp', 'DEX'],
+	['lithos liquidity', 'DEX'],
+	['lithos lock', 'DEX'],
+	['lithos', 'Lithos'],
 	['rosen', 'Bridge'],
 	['duckpool', 'Lending'],
 	['mixer', 'Mixer']
@@ -108,6 +114,36 @@ const BRIDGE_TOKENS: { [tokenId: string]: string } = {
 const hasToken = (boxes: Box[], tokenId: string) =>
 	boxes.some((box) => box.assets?.some((asset) => asset.tokenId === tokenId));
 
+// Every Lithos queue operation spends the emission box, and context variable 0 on it
+// says which one.
+const LITHOS_OPERATIONS: { [var0: string]: string } = {
+	'0200': 'Lithos Join',
+	'0201': 'Lithos Activate',
+	'0202': 'Lithos Clear'
+};
+
+/**
+ * The Lithos mining pool's own txs, named ahead of the address book (which calls each
+ * of its contracts plain "Lithos"). A genesis tx spends a lender's collateral to make
+ * its block a Lithos block; the miner puts it straight into the block, so it is never
+ * pending.
+ */
+function lithosLabel(tx: MempoolTx, detectContract: ContractDetector | null): Label | null {
+	if (!detectContract) return null;
+
+	const contract = (box: Box) => (box.ergoTree ? detectContract(box.ergoTree) : null);
+
+	if (tx.inputs.some((box) => contract(box) === 'Lithos Collateral')) {
+		return labelled('Lithos Genesis', 'Mining pool');
+	}
+
+	const emission = tx.inputs.find((box) => contract(box) === 'Lithos Emission');
+	if (!emission) return null;
+
+	const var0 = emission.spendingProof?.extension?.['0'];
+	return labelled((var0 && LITHOS_OPERATIONS[var0]) || 'Lithos Emission', 'Mining pool');
+}
+
 /**
  * The one label a tx is shown with: a block's own txs, storage rent, then the special
  * cases above, then the address book, then the contracts ErgExplorer knows by
@@ -128,6 +164,9 @@ export function labelTx(
 	}
 
 	if (tx.storageRent) return labelled('Storage Rent', 'Storage Rent');
+
+	const lithos = lithosLabel(tx, detectContract);
+	if (lithos) return lithos;
 
 	const boxes = [...tx.inputs, ...tx.outputs];
 

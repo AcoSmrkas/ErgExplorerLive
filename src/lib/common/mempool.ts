@@ -119,7 +119,9 @@ export function buildTx(tx: RawTx, height: number, fresh = false): MempoolTx {
 		ergoTree: box.ergoTree,
 		address: ergoTreeToAddress(box.ergoTree!),
 		assets: box.assets,
-		additionalRegisters: box.additionalRegisters
+		additionalRegisters: box.additionalRegisters,
+		// Inputs only: the context variables say which operation a contract box ran.
+		spendingProof: box.spendingProof
 	});
 
 	const resolved = { id: tx.id, inputs: tx.inputs.map(resolve), outputs: tx.outputs.map(resolve) };
