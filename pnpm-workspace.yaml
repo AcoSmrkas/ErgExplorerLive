@@ -6,3 +6,8 @@ allowBuilds:
   esbuild: true
 onlyBuiltDependencies:
   - esbuild
+
+# SvelteKit still pins cookie ^0.6 (advisory GHSA-pxg6-pf52-xh8x, fixed in 0.7).
+# Only its server runtime uses it, which this static build never runs; 0.7 keeps the same API.
+overrides:
+  cookie: ^0.7.2
