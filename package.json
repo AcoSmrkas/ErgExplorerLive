@@ -42,7 +42,7 @@
 	"dependencies": {
 		"@fleet-sdk/core": "^0.8.5",
 		"@sveltejs/adapter-static": "^3.0.10",
-		"axios": "^1.19.0",
+		"axios": "^1.20.0",
 		"bignumber.js": "^9.3.1",
 		"socket.io": "^4.8.3",
 		"socket.io-client": "^4.8.3"
