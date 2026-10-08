@@ -2,13 +2,62 @@
 	import { flip } from 'svelte/animate';
 	import { fade } from 'svelte/transition';
 	import { page } from '$app/state';
+	import { loadOlderBlocks } from '$lib/common/blocks';
 	import { lithosHeights } from '$lib/common/lithos';
 	import { land, reducedMotion } from '$lib/common/motion';
 	import { nFormatter } from '$lib/common/utils';
 	import { addressBook, mempoolTxCount, nodeInfo, now, recentBlocks } from '$lib/store/store';
 
-	// Oldest on the left, so the chain grows toward the next block.
-	let blocks = $derived([...$recentBlocks].reverse());
+	// Newest first; the strip lays them out right to left (row-reverse), so the chain grows
+	// toward the next block and stays pinned there while older blocks scroll in on the left.
+	let blocks = $derived($recentBlocks);
+
+	let strip = $state<HTMLDivElement>();
+	let loading = $state(false);
+	// Set after a page brings nothing (an explorer down, or the cap reached): rests a while
+	// rather than asking again on every scroll event.
+	let resting = false;
+
+	// Within this many px of the left end, the next page of older blocks is fetched.
+	const PRELOAD = 400;
+
+	/** Loads older blocks while the strip is near its left end, or isn't full yet. */
+	async function fill() {
+		if (loading || resting || !strip || blocks.length === 0) return;
+		// In a row-reverse box scrollLeft is 0 at the right end and negative going left.
+		const left = strip.scrollWidth - strip.clientWidth - Math.abs(strip.scrollLeft);
+		if (left > PRELOAD) return;
+
+		loading = true;
+		const more = await loadOlderBlocks();
+		loading = false;
+
+		if (more) {
+			requestAnimationFrame(fill);
+		} else {
+			resting = true;
+			setTimeout(() => (resting = false), 15000);
+		}
+	}
+
+	// A wide screen may show every block of the first page: top it up once it arrives.
+	$effect(() => {
+		if (blocks.length) requestAnimationFrame(fill);
+	});
+
+	// A mouse wheel scrolls the strip sideways; trackpads and touch already do.
+	$effect(() => {
+		const el = strip;
+		if (!el) return;
+		const onWheel = (event: WheelEvent) => {
+			if (Math.abs(event.deltaX) >= Math.abs(event.deltaY)) return;
+			if (el.scrollWidth <= el.clientWidth) return;
+			event.preventDefault();
+			el.scrollLeft += event.deltaY;
+		};
+		el.addEventListener('wheel', onWheel, { passive: false });
+		return () => el.removeEventListener('wheel', onWheel);
+	});
 
 	// The block open in the block view, if any; otherwise the live mempool is.
 	let viewing = $derived(page.params.height ? Number(page.params.height) : null);
@@ -36,12 +85,12 @@
 
 <footer class="chain" aria-label="Latest blocks">
 	<div class="inner">
-		<div class="blocks">
+		<div class="blocks" bind:this={strip} onscroll={fill}>
 			{#each blocks as block, i (block.height)}
 				{@const lithos = $lithosHeights.has(block.height)}
 				<a
 					class="block"
-					class:newest={i === blocks.length - 1}
+					class:newest={i === 0}
 					class:current={block.height === viewing}
 					class:lithos
 					href={`/block/${block.height}`}
@@ -50,7 +99,7 @@
 						? 'Mined through the Lithos pool'
 						: `Mined by ${$addressBook.get(block.miner.address)?.name ?? block.miner.name}`}
 					animate:flip={{ duration: reducedMotion ? 0 : 500 }}
-					in:land
+					in:land={{ distance: i === 0 ? 60 : 0 }}
 					out:fade={{ duration: 200 }}
 				>
 					{#if lithos}<span class="pool">Lithos</span>{/if}
@@ -62,6 +111,9 @@
 					<span class="meta faint">{ago(block.timestamp)}</span>
 				</a>
 			{/each}
+			{#if loading}
+				<span class="block loading" aria-label="Loading older blocks"></span>
+			{/if}
 		</div>
 
 		<a
@@ -105,13 +157,20 @@
 	.blocks {
 		flex: 1;
 		display: flex;
-		justify-content: flex-end;
+		flex-direction: row-reverse;
 		align-items: center;
 		gap: 22px;
 		min-width: 0;
 		height: 100%;
-		overflow: hidden;
+		overflow-x: auto;
+		overflow-y: hidden;
+		overscroll-behavior-x: contain;
+		scrollbar-width: none;
 		mask-image: linear-gradient(90deg, transparent, #000 12%);
+	}
+
+	.blocks::-webkit-scrollbar {
+		display: none;
 	}
 
 	.block,
@@ -137,6 +196,18 @@
 		transition:
 			transform 0.2s,
 			border-color 0.2s;
+	}
+
+	/* A page of older blocks on its way in. */
+	.block.loading {
+		opacity: 0.5;
+		animation: pulse 1.2s ease-in-out infinite;
+	}
+
+	@keyframes pulse {
+		50% {
+			opacity: 0.2;
+		}
 	}
 
 	.block:hover {
