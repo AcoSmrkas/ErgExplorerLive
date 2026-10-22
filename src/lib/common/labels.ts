@@ -10,6 +10,7 @@ export type Label = { label: string; group: string; color: string };
 const GROUP_COLORS: { [group: string]: string } = {
 	'Storage Rent': '#f43f5e',
 	Transfers: '#8b8b94',
+	Consolidation: '#a3e635',
 	'Mining pools': '#f59e0b',
 	// The purple of the LIT token icon (#8830f8), lightened to read as text on the dark cards.
 	Lithos: '#a46cff',
@@ -50,6 +51,7 @@ const TYPE_GROUPS: { [type: string]: string } = {
 	// Named by a contract template rather than by the address book
 	Contract: 'Contracts',
 	Transfer: 'Transfers',
+	Consolidation: 'Consolidation',
 	'Storage Rent': 'Storage Rent'
 };
 
@@ -147,7 +149,7 @@ function lithosLabel(tx: MempoolTx, detectContract: ContractDetector | null): La
 /**
  * The one label a tx is shown with: a block's own txs, storage rent, then the special
  * cases above, then the address book, then the contracts ErgExplorer knows by
- * template, then "Transfer".
+ * template, then a wallet merging its boxes, then "Transfer".
  */
 export function labelTx(
 	tx: MempoolTx,
@@ -216,6 +218,8 @@ export function labelTx(
 			if (label) return labelled(label, 'Contract');
 		}
 	}
+
+	if (tx.consolidation) return labelled('Consolidation', 'Consolidation');
 
 	return labelled('Transfer', 'Transfer');
 }

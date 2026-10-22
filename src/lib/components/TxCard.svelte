@@ -41,7 +41,15 @@
 		};
 	}
 
-	let lead = $derived(primary ? view(primary) : undefined);
+	// A wallet merging its boxes moves nothing on net, so it shows what it merged.
+	let merged = $derived(tx.consolidation);
+	let lead = $derived(
+		merged
+			? { kind: 'move', amount: merged.value / 1e9, name: 'ERG', icon: ERG_ICON }
+			: primary
+				? view(primary)
+				: undefined
+	);
 </script>
 
 <a
@@ -85,7 +93,23 @@
 		</div>
 	{/if}
 
-	{#if tokens.length > 0}
+	{#if merged}
+		<div class="merge" title="{merged.inputs} boxes merged into {merged.outputs}">
+			<svg viewBox="0 0 24 16" width="22" height="15" aria-hidden="true">
+				<path
+					d="M2 2.5c6 0 8 5.5 13 5.5M2 8h13M2 13.5c6 0 8-5.5 13-5.5"
+					fill="none"
+					stroke="currentColor"
+					stroke-width="1.6"
+					stroke-linecap="round"
+				/>
+				<circle cx="19" cy="8" r="3" fill="currentColor" />
+			</svg>
+			<span class="mono">{merged.inputs}</span> boxes
+			<span class="arrow" aria-hidden="true">→</span>
+			<span class="mono">{merged.outputs}</span>
+		</div>
+	{:else if tokens.length > 0}
 		<div class="tokens">
 			{#each tokens.slice(0, MAX_TOKENS) as token (token.tokenId)}
 				{@const t = view(token)}
@@ -344,6 +368,29 @@
 		flex: none;
 		font-size: 0.72rem;
 		color: var(--muted);
+	}
+
+	.merge {
+		display: inline-flex;
+		align-self: flex-start;
+		align-items: center;
+		gap: 6px;
+		padding: 3px 9px 3px 7px;
+		border-radius: 999px;
+		font-size: 0.72rem;
+		color: var(--muted);
+		background: color-mix(in oklab, var(--accent) 8%, transparent);
+		border: 1px solid color-mix(in oklab, var(--accent) 22%, transparent);
+		white-space: nowrap;
+	}
+
+	.merge svg {
+		flex: none;
+		color: var(--accent);
+	}
+
+	.merge .mono {
+		color: var(--text);
 	}
 
 	.route {

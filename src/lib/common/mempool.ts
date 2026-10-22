@@ -34,6 +34,8 @@ export type MempoolTx = {
 	fee: number;
 	/** Spends a box that went unspent for four years, claiming its storage rent. */
 	storageRent: boolean;
+	/** Several boxes of one wallet merged into fewer: see consolidation(). */
+	consolidation: { inputs: number; outputs: number; value: number } | null;
 	/** Who paid: see parties(). */
 	from: Box | 'multiple';
 	/** Who got paid: see parties(). */
@@ -136,6 +138,7 @@ export function buildTx(tx: RawTx, height: number, fresh = false): MempoolTx {
 			.filter((box) => box.address === FEE_ADDRESS)
 			.reduce((sum, box) => sum + Number(box.value), 0),
 		storageRent: tx.inputs.some((input) => isStorageRentSpend(input, height)),
+		consolidation: consolidation(resolved),
 		...parties(resolved),
 		fresh
 	};
@@ -189,6 +192,32 @@ function parties(tx: { inputs: Box[]; outputs: Box[] }): Pick<MempoolTx, 'from' 
 	const pick = (boxes: Box[]) => (boxes.length > 1 ? 'multiple' : boxes[0]);
 
 	return { from, to: pick(receivers) ?? pick(others) ?? 'itself' };
+}
+
+/**
+ * A wallet merging its boxes: every box but the miner fee belongs to one P2PK address,
+ * and fewer come out than went in. value is the nanoERG merged.
+ */
+function consolidation(tx: { inputs: Box[]; outputs: Box[] }): MempoolTx['consolidation'] {
+	const outputs = tx.outputs.filter((box) => box.address !== FEE_ADDRESS);
+	const address = tx.inputs[0]?.address;
+	const own = (box: Box) => box.address === address;
+
+	if (
+		tx.inputs.length < 2 ||
+		outputs.length >= tx.inputs.length ||
+		!tx.inputs[0].ergoTree?.startsWith('0008cd') ||
+		!tx.inputs.every(own) ||
+		!outputs.every(own)
+	) {
+		return null;
+	}
+
+	return {
+		inputs: tx.inputs.length,
+		outputs: outputs.length,
+		value: tx.inputs.reduce((sum, box) => sum + Number(box.value), 0)
+	};
 }
 
 /**
