@@ -1,5 +1,6 @@
 <script lang="ts">
-	// Mew Finance banner, the same one ergexplorer.com shows (partials/mew-ad.njk there).
+	// Mew Finance banner, the same one ergexplorer.com shows (partials/mew-ad.njk there), slimmed
+	// down to fit the header bar.
 	import { onMount } from 'svelte';
 	import { initMewAd } from '$lib/mew-ad/mew-ad.js';
 	import '$lib/mew-ad/mew-ad.css';
@@ -216,9 +217,153 @@
 </div>
 
 <style>
+	/* The banner's own CSS (mew-ad.css) sizes it for a 100px slot and sets its sizes by viewport
+	   width. These rules, a class more specific, size it to the 44px header bar instead. */
 	.slot {
-		max-width: 1480px;
+		flex: 1 1 auto;
+		min-width: 0;
+		max-width: 820px;
 		margin: 0 auto;
-		padding: 14px 16px 0;
+	}
+
+	.slot :global(.mew-ad) {
+		--h: 44px;
+		--logo: 30px;
+		gap: 12px;
+		padding: 0 6px 0 10px;
+		border-radius: 12px;
+	}
+
+	.slot :global(.mew-ad__brand) {
+		gap: 10px;
+	}
+
+	.slot :global(.mew-ad__text) {
+		flex-direction: row;
+		align-items: center;
+		gap: 14px;
+	}
+
+	.slot :global(.mew-ad__name) {
+		gap: 5px;
+	}
+
+	.slot :global(.mew-ad__mew) {
+		font-size: 24px;
+	}
+
+	.slot :global(.mew-ad__fin) {
+		font-size: 15px;
+	}
+
+	.slot :global(.mew-ad__lines) {
+		margin-top: 2px;
+		padding-bottom: 0;
+	}
+
+	.slot :global(.mew-ad__line) {
+		font-size: 12.5px;
+		white-space: nowrap;
+	}
+
+	.slot :global(.mew-ad__stage) {
+		min-width: 90px;
+	}
+
+	.slot :global(.mew-ad__scene) {
+		--side-x: 31%;
+		--side-o: 1;
+		--gone-x: 50%;
+		inset: 3px 0 3px;
+	}
+
+	.slot :global(.mew-ad__halo) {
+		width: 96px;
+		height: 96px;
+		margin: -48px 0 0 -48px;
+	}
+
+	.slot :global(.mew-ad__shadow) {
+		bottom: 1px;
+		width: 60px;
+		height: 8px;
+		margin-left: -30px;
+	}
+
+	.slot :global(.mew-ad__burst svg) {
+		width: 8px;
+		height: 8px;
+		left: -4px;
+		top: -4px;
+	}
+
+	.slot :global(.mew-ad__peek) {
+		display: none;
+	}
+
+	.slot :global(.mew-ad__cta) {
+		display: inline-flex;
+		width: auto;
+		height: 30px;
+		gap: 6px;
+		padding: 0 12px 0 10px;
+		font-size: 12.5px;
+		box-shadow:
+			0 3px 0 #b88f0a,
+			0 6px 14px rgb(249 215 45 / 0.2);
+	}
+
+	.slot :global(.mew-ad__cta-text) {
+		display: inline;
+	}
+
+	.slot :global(.mew-ad__paw) {
+		display: block;
+		width: 15px;
+		height: 15px;
+	}
+
+	.slot :global(.mew-ad__arrow) {
+		width: 14px;
+		height: 14px;
+	}
+
+	.slot :global(.mew-ad:hover .mew-ad__cta) {
+		box-shadow:
+			0 4px 0 #b88f0a,
+			0 8px 16px rgb(249 215 45 / 0.28);
+	}
+
+	@media (max-width: 1080px) {
+		.slot :global(.mew-ad__scene) {
+			--side-o: 0;
+		}
+	}
+
+	@media (max-width: 980px) {
+		.slot :global(.mew-ad__lines) {
+			display: none;
+		}
+	}
+
+	@media (max-width: 760px) {
+		.slot :global(.mew-ad__cta) {
+			width: 30px;
+			padding: 0;
+			justify-content: center;
+		}
+
+		.slot :global(.mew-ad__cta-text),
+		.slot :global(.mew-ad__paw) {
+			display: none;
+		}
+	}
+
+	@media (max-width: 640px) {
+		.slot {
+			order: 3;
+			flex-basis: 100%;
+			max-width: none;
+		}
 	}
 </style>

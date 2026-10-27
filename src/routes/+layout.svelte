@@ -7,7 +7,6 @@
 	import { loadPrices } from '$lib/common/prices';
 	import Header from '$lib/components/Header.svelte';
 	import ChainBar from '$lib/components/ChainBar.svelte';
-	import MewAd from '$lib/components/MewAd.svelte';
 
 	let { children } = $props();
 
@@ -20,7 +19,6 @@
 </script>
 
 <Header />
-<MewAd />
 
 {@render children()}
 

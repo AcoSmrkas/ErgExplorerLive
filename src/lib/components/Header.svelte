@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { ERGEXPLORER_URL } from '$lib/common/const';
 	import { connected } from '$lib/store/store';
+	import MewAd from './MewAd.svelte';
 
 	// Before the first connection there is nothing to reconnect to.
 	let wasConnected = $state(false);
@@ -20,6 +21,8 @@
 				{$connected ? 'LIVE' : wasConnected ? 'RECONNECTING' : 'CONNECTING'}
 			</span>
 		</a>
+
+		<MewAd />
 
 		<div class="actions">
 			<a class="explorer" href={ERGEXPLORER_URL} target="_blank" rel="noopener">
@@ -149,6 +152,14 @@
 	.explorer:hover {
 		border-color: rgb(251 92 22 / 0.5);
 		background: rgb(251 92 22 / 0.1);
+	}
+
+	/* On phones the banner takes a row of its own under the brand and the button. */
+	@media (max-width: 640px) {
+		.inner {
+			flex-wrap: wrap;
+			row-gap: 8px;
+		}
 	}
 
 	@media (max-width: 520px) {
