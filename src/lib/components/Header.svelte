@@ -79,6 +79,7 @@
 	}
 
 	.live {
+		--live: #22c55e;
 		display: inline-flex;
 		align-items: center;
 		gap: 6px;
@@ -97,7 +98,8 @@
 		width: 7px;
 		height: 7px;
 		border-radius: 50%;
-		background: var(--main-color);
+		background: var(--live);
+		box-shadow: 0 0 6px var(--live);
 	}
 
 	/* Pulses by transform and opacity, which the compositor animates without repainting. */
@@ -106,7 +108,7 @@
 		position: absolute;
 		inset: 0;
 		border-radius: 50%;
-		background: var(--main-color);
+		background: var(--live);
 		animation: beat 1.6s ease-out infinite;
 	}
 
@@ -125,11 +127,7 @@
 		color: #fbbf24;
 		background: rgb(251 191 36 / 0.1);
 		border-color: rgb(251 191 36 / 0.35);
-	}
-
-	.live.offline .dot,
-	.live.offline .dot::after {
-		background: #fbbf24;
+		--live: #fbbf24;
 	}
 
 	.explorer {
