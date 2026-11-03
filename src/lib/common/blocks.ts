@@ -1,3 +1,4 @@
+import { ErgoAddress, Network } from '@fleet-sdk/core';
 import { get } from 'svelte/store';
 import { EXPLORER_URLS, NODE_URLS } from '$lib/common/const';
 import { refreshLithosHeights } from '$lib/common/lithos';
@@ -9,42 +10,107 @@ const LIMIT = 16;
 // Blocks kept once scrolled back, so a long scroll doesn't grow the bar without end.
 const MAX_BLOCKS = 500;
 
-/** Keeps the blocks older than the fresh page, so a refresh doesn't drop what was scrolled back to. */
-function merge(fresh: Block[], kept: Block[]) {
-	const oldest = fresh[fresh.length - 1]?.height ?? Infinity;
-	return [...fresh, ...kept.filter((block) => block.height < oldest)].slice(0, MAX_BLOCKS);
+/**
+ * Puts blocks into the chain bar by height, newest first: a block replaces the one it
+ * has at that height and the rest stay, so neither a late answer nor a page that stops
+ * below the node's tip drops a block.
+ */
+function addBlocks(incoming: Block[]) {
+	if (incoming.length === 0) return;
+
+	recentBlocks.update((current) => {
+		const byHeight = new Map(current.map((block) => [block.height, block]));
+		for (const block of incoming) byHeight.set(block.height, block);
+		return [...byHeight.values()].sort((a, b) => b.height - a.height).slice(0, MAX_BLOCKS);
+	});
+
+	const blocks = get(recentBlocks);
+	void refreshLithosHeights(blocks[blocks.length - 1].height);
 }
 
-/**
- * The latest blocks, for the chain bar. An explorer can be a block behind our node, so
- * when it doesn't have the block the node just announced yet, it is asked again shortly.
- */
-export async function refreshBlocks(height: number, attempt = 0) {
+/** Heights from the tip down to the oldest block in the bar that it has no block for. */
+function missingHeights(tip: number) {
+	const blocks = get(recentBlocks);
+	const have = new Set(blocks.map((block) => block.height));
+	const oldest = blocks[blocks.length - 1]?.height ?? tip - LIMIT + 1;
+	const missing: number[] = [];
+
+	for (let height = tip; height >= oldest && missing.length < LIMIT; height--) {
+		if (!have.has(height)) missing.push(height);
+	}
+
+	return missing;
+}
+
+/** The newest page of blocks from the first explorer that answers, or null. */
+async function latestFromExplorer(): Promise<Block[] | null> {
 	for (const base of EXPLORER_URLS) {
 		try {
 			const res = await fetch(`${base}/api/v1/blocks?limit=${LIMIT}`, {
 				signal: AbortSignal.timeout(6000)
 			});
-			if (!res.ok) continue;
-
-			const items: Block[] = (await res.json()).items;
-			const newest = items[0]?.height ?? 0;
-
-			// An answer that arrives after a newer one doesn't roll the bar back.
-			if (newest >= (get(recentBlocks)[0]?.height ?? 0)) {
-				const blocks = merge(items, get(recentBlocks));
-				recentBlocks.set(blocks);
-				void refreshLithosHeights(blocks[blocks.length - 1]?.height ?? newest);
-			}
-
-			if (newest < height && attempt < 3) {
-				setTimeout(() => refreshBlocks(height, attempt + 1), 4000);
-			}
-
-			return;
+			if (res.ok) return (await res.json()).items;
 		} catch {
 			// Try the next explorer.
 		}
+	}
+
+	return null;
+}
+
+/** A block as the chain bar shows it, built from a node, or null when no node has it. */
+async function blockFromNode(height: number): Promise<Block | null> {
+	for (const base of NODE_URLS) {
+		try {
+			const options = { signal: AbortSignal.timeout(6000) };
+
+			const ids: string[] = await (await fetch(`${base}/blocks/at/${height}`, options)).json();
+			if (ids.length === 0) continue;
+
+			const [header, body] = await Promise.all(
+				['header', 'transactions'].map(async (part) => {
+					const res = await fetch(`${base}/blocks/${ids[0]}/${part}`, options);
+					if (!res.ok) throw new Error(`HTTP ${res.status}`);
+					return res.json();
+				})
+			);
+
+			const address = ErgoAddress.fromPublicKey(header.powSolutions.pk, Network.Mainnet).toString();
+
+			return {
+				id: header.id,
+				height: header.height,
+				timestamp: header.timestamp,
+				transactionsCount: body.transactions.length,
+				// The explorer names a miner it doesn't know by the end of its address.
+				miner: { address, name: address.slice(-8) }
+			};
+		} catch {
+			// Try the next node.
+		}
+	}
+
+	return null;
+}
+
+/**
+ * The latest blocks, for the chain bar. An explorer can be blocks behind our node, so
+ * the blocks it doesn't have yet are read from the node, and it is asked again later.
+ */
+export async function refreshBlocks(height: number, attempt = 0) {
+	// A newer block came in since: its refresh covers this one too.
+	if ((get(nodeInfo)?.fullHeight ?? height) > height) return;
+
+	const page = await latestFromExplorer();
+	if (page) addBlocks(page);
+
+	const missing = missingHeights(height);
+	if (missing.length === 0) return;
+
+	addBlocks((await Promise.all(missing.map(blockFromNode))).filter((block) => block !== null));
+
+	if (missingHeights(height).length > 0 && attempt < 6) {
+		setTimeout(() => refreshBlocks(height, attempt + 1), 5000);
 	}
 }
 
@@ -73,9 +139,7 @@ export async function loadOlderBlocks(): Promise<boolean> {
 			const older = ((await res.json()).items as Block[]).filter((block) => block.height < before);
 			if (older.length === 0) return false;
 
-			const merged = [...current, ...older].slice(0, MAX_BLOCKS);
-			recentBlocks.set(merged);
-			void refreshLithosHeights(merged[merged.length - 1].height);
+			addBlocks(older);
 			return true;
 		} catch {
 			// Try the next explorer.

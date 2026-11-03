@@ -1,7 +1,11 @@
 <script lang="ts">
 	import { ERGEXPLORER_URL } from '$lib/common/const';
 	import { connected } from '$lib/store/store';
+	import Donate from './Donate.svelte';
 	import MewAd from './MewAd.svelte';
+
+	// Hidden: the logo links to ErgExplorer, and Donate takes this place.
+	const showExplorerLink = false;
 
 	// Before the first connection there is nothing to reconnect to.
 	let wasConnected = $state(false);
@@ -12,32 +16,35 @@
 
 <header class="header">
 	<div class="inner">
-		<a href="/" class="brand" aria-label="Erg Explorer Live">
+		<a href={ERGEXPLORER_URL} class="brand" target="_blank" rel="noopener" aria-label="Open Erg Explorer">
 			<img src="https://ergexplorer.com/images/logo.png" alt="" width="36" height="36" />
 			<span class="name">Erg Explorer</span>
 			<!-- Doubles as the connection status: amber until the socket (re)connects. -->
 			<span class="live" class:offline={!$connected} aria-live="polite">
 				<span class="dot"></span>
-				{$connected ? 'LIVE' : wasConnected ? 'RECONNECTING' : 'CONNECTING'}
+				{$connected ? 'Live' : wasConnected ? 'Reconnecting' : 'Connecting'}
 			</span>
 		</a>
 
 		<MewAd />
 
 		<div class="actions">
-			<a class="explorer" href={ERGEXPLORER_URL} target="_blank" rel="noopener">
-				<span class="hidden sm:inline">Open</span> ErgExplorer
-				<svg viewBox="0 0 16 16" width="12" height="12" aria-hidden="true">
-					<path
-						d="M5 3h8v8M13 3 4 12"
-						fill="none"
-						stroke="currentColor"
-						stroke-width="1.8"
-						stroke-linecap="round"
-						stroke-linejoin="round"
-					/>
-				</svg>
-			</a>
+			<Donate />
+			{#if showExplorerLink}
+				<a class="explorer" href={ERGEXPLORER_URL} target="_blank" rel="noopener">
+					<span class="hidden sm:inline">Open</span> ErgExplorer
+					<svg viewBox="0 0 16 16" width="12" height="12" aria-hidden="true">
+						<path
+							d="M5 3h8v8M13 3 4 12"
+							fill="none"
+							stroke="currentColor"
+							stroke-width="1.8"
+							stroke-linecap="round"
+							stroke-linejoin="round"
+						/>
+					</svg>
+				</a>
+			{/if}
 		</div>
 	</div>
 </header>
@@ -81,19 +88,15 @@
 		white-space: nowrap;
 	}
 
+	/* A dot and a word beside the name, not a badge: green while connected, amber otherwise. */
 	.live {
 		--live: #22c55e;
 		display: inline-flex;
 		align-items: center;
-		gap: 6px;
-		padding: 3px 9px;
-		border-radius: 999px;
-		font-size: 0.68rem;
-		font-weight: 800;
-		letter-spacing: 0.14em;
-		color: var(--main-color);
-		background: rgb(251 92 22 / 0.12);
-		border: 1px solid rgb(251 92 22 / 0.35);
+		gap: 7px;
+		font-size: 0.78rem;
+		font-weight: 500;
+		color: var(--muted);
 	}
 
 	.dot {
@@ -128,9 +131,13 @@
 
 	.live.offline {
 		color: #fbbf24;
-		background: rgb(251 191 36 / 0.1);
-		border-color: rgb(251 191 36 / 0.35);
 		--live: #fbbf24;
+	}
+
+	.actions {
+		display: flex;
+		align-items: center;
+		gap: 8px;
 	}
 
 	.explorer {

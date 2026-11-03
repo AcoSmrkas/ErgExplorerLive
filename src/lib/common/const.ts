@@ -3,6 +3,9 @@ export const ERGEXPLORER_URL = 'https://ergexplorer.com/';
 export const ERGEXPLORER_API = 'https://api.ergexplorer.com/';
 export const ERG_ICON = 'https://ergexplorer.com/images/logo-new.png';
 
+// Same donation wallet as ergexplorer.com (scripts/common/config.js there).
+export const DONATION_ADDRESS = '9hW2SRFsgRVwfNdDMjYFnQnctfv9RtkWkRz5WyiGFQFD44S1SrP';
+
 // Our chain gateway: serves only sources at the chain tip.
 const CHAIN_GATEWAY = 'https://chain.mewfinance.com';
 
