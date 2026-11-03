@@ -1,7 +1,7 @@
 /* eslint-disable */
 // @ts-nocheck
-// Copied unchanged from ErgExplorer app/scripts/addresses/contract-names.js (99211e3). See $lib/common/contracts.ts.
-import { CRUX_TEMPLATES, DUCKPOOLS_TEMPLATES, EPERPS_TEMPLATES, ERGO_MIXER_TEMPLATES, ERGONAMES_TEMPLATES, ERGOPAD_STAKING_TEMPLATES, ERGORAFFLE_TEMPLATES, LITHOS_LOCK_TEMPLATES, LITHOS_POOL_TEMPLATES, LITHOS_TEMPLATES, ORACLE_POOL_V2_TEMPLATES, PAIDEIA_TEMPLATES, ROSEN_TEMPLATES, THE_FIELD_TEMPLATES, SPECTRUM_TEMPLATES, SWAP_TEMPLATES } from './constants.js?v=4';
+// Copied unchanged from ErgExplorer app/scripts/addresses/contract-names.js (64b4a91). See $lib/common/contracts.ts.
+import { CRUX_TEMPLATES, DUCKPOOLS_TEMPLATES, EPERPS_TEMPLATES, ERGO_MIXER_TEMPLATES, ERGONAMES_TEMPLATES, ERGOPAD_STAKING_TEMPLATES, ERGODEX_CL_TEMPLATES, ERGORAFFLE_TEMPLATES, LITHOS_LOCK_TEMPLATES, LITHOS_POOL_TEMPLATES, LITHOS_TEMPLATES, MACHINA_TEMPLATES, ORACLE_POOL_V2_TEMPLATES, PAIDEIA_TEMPLATES, ROSEN_TEMPLATES, THE_FIELD_TEMPLATES, SPECTRUM_TEMPLATES, SWAP_TEMPLATES } from './constants.js?v=6';
 
 // The name each known contract shows under: [protocol, templates by role, name by role, roles
 // whose entries are exact trees rather than templates]. Addresses are labelled with these names
@@ -40,6 +40,15 @@ const CONTRACT_NAME_GROUPS = [
 		T2T_REDEEM: 'Lithos LP Redeem',
 		T2T_POOL: 'Lithos Liquidity Pool',
 		T2T_VAULT: 'Lithos LP Fee Vault'
+	}],
+	['Machina', MACHINA_TEMPLATES, {
+		GRID: 'Machina Grid Order',
+		LIMIT: 'Machina Limit Order',
+		DCA: 'Machina DCA'
+	}],
+	['ErgoDex', ERGODEX_CL_TEMPLATES, {
+		POSITION: 'ErgoDex CL Position',
+		CONFIG: 'ErgoDex CL Config'
 	}],
 	['ErgoRaffle', ERGORAFFLE_TEMPLATES, {
 		SERVICE: 'ErgoRaffle Service',
