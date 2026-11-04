@@ -1,8 +1,8 @@
 /* eslint-disable */
 // @ts-nocheck
-// Copied unchanged from ErgExplorer app/scripts/addresses/transaction-analyzer.js (99211e3). See $lib/common/contracts.ts.
-import { LITHOS_TEMPLATES, TxInOut, TxType } from './constants.js?v=4';
-import { CONTRACT_TEMPLATES } from './contract-names.js?v=3';
+// Copied unchanged from ErgExplorer app/scripts/addresses/transaction-analyzer.js (d34813a). See $lib/common/contracts.ts.
+import { LITHOS_TEMPLATES, TxInOut, TxType } from './constants.js?v=7';
+import { CONTRACT_TEMPLATES } from './contract-names.js?v=6';
 
 /**
  * Determine transaction type based on input/output address types
