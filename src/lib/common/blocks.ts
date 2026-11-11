@@ -154,6 +154,7 @@ export type BlockHeader = {
 	parentId: string;
 	height: number;
 	timestamp: number;
+	powSolutions: { pk: string };
 };
 
 /**

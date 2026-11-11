@@ -1,12 +1,13 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
+	import { ErgoAddress, Network } from '@fleet-sdk/core';
 	import { fetchBlock, type BlockHeader } from '$lib/common/blocks';
 	import { EMISSION_ADDRESS, ERGEXPLORER_URL, FEE_ADDRESS } from '$lib/common/const';
 	import { contractDetector } from '$lib/common/contracts';
 	import { labelTx, nameOf } from '$lib/common/labels';
 	import { buildTx, type MempoolTx } from '$lib/common/mempool';
 	import { valueMoved } from '$lib/common/prices';
-	import { collectTokenIds, getAssetInfos, nFormatter } from '$lib/common/utils';
+	import { collectTokenIds, getAssetInfos, nFormatter, shortAddress } from '$lib/common/utils';
 	import {
 		addressBook,
 		ergUsd,
@@ -70,17 +71,28 @@
 	);
 
 	// The reward goes to the miner's address: whatever the first tx pays that isn't
-	// the emission contract. In a Lithos block that key is the lender whose collateral
-	// the block spent, not whoever found it.
+	// the emission contract. In a Lithos block the miner key is the lender whose
+	// collateral the block spent, so the lender is shown by that key's wallet address,
+	// not the reward contract the coins sit in.
 	let miner = $derived.by(() => {
-		const reward = block?.txs.find((tx) =>
+		if (!block) return '';
+
+		if (labelled.some((item) => item.label.label === 'Lithos Genesis')) {
+			const lender = ErgoAddress.fromPublicKey(
+				block.header.powSolutions.pk,
+				Network.Mainnet
+			).toString();
+			const name = $addressBook.get(lender)?.name ?? shortAddress(lender);
+
+			return `Lithos · reward to lender ${name}`;
+		}
+
+		const reward = block.txs.find((tx) =>
 			tx.inputs.some((box) => box.address === EMISSION_ADDRESS)
 		);
 		const box = reward?.outputs.find((box) => box.address !== EMISSION_ADDRESS);
-		const name = box ? nameOf(box, $addressBook, $contractDetector) : '';
-		const lithos = labelled.some((item) => item.label.label === 'Lithos Genesis');
 
-		return lithos ? `Lithos · reward to lender ${name}` : name;
+		return box ? nameOf(box, $addressBook, $contractDetector) : '';
 	});
 
 	let fees = $derived((block?.txs ?? []).reduce((sum, tx) => sum + tx.fee, 0) / 1e9);
