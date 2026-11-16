@@ -1,7 +1,7 @@
 /* eslint-disable */
 // @ts-nocheck
-// Copied unchanged from ErgExplorer app/scripts/addresses/contract-names.js (d34813a). See $lib/common/contracts.ts.
-import { CRUX_TEMPLATES, DUCKPOOLS_TEMPLATES, EPERPS_TEMPLATES, ERGO_MIXER_TEMPLATES, ERGONAMES_TEMPLATES, ERGOPAD_STAKING_TEMPLATES, ERGODEX_CL_TEMPLATES, ERGORAFFLE_TEMPLATES, LITHOS_LOCK_TEMPLATES, LITHOS_POOL_TEMPLATES, LITHOS_TEMPLATES, MACHINA_TEMPLATES, ORACLE_POOL_V1_TEMPLATES, ORACLE_POOL_V2_TEMPLATES, PAIDEIA_TEMPLATES, ROSEN_TEMPLATES, THE_FIELD_TEMPLATES, SPECTRUM_TEMPLATES, SWAP_TEMPLATES } from './constants.js?v=7';
+// Copied unchanged from ErgExplorer app/scripts/addresses/contract-names.js (57b18bd). See $lib/common/contracts.ts.
+import { CRUX_TEMPLATES, DUCKPOOLS_TEMPLATES, EPERPS_TEMPLATES, ERGO_MIXER_TEMPLATES, ERGONAMES_TEMPLATES, ERGOPAD_STAKING_TEMPLATES, ERGODEX_CL_TEMPLATES, ERGORAFFLE_TEMPLATES, LITHOS_LOCK_TEMPLATES, LITHOS_POOL_TEMPLATES, LITHOS_TEMPLATES, MACHINA_TEMPLATES, ORACLE_POOL_V1_TEMPLATES, ORACLE_POOL_V2_TEMPLATES, PAIDEIA_TEMPLATES, ROSEN_TEMPLATES, THE_FIELD_TEMPLATES, SPECTRUM_TEMPLATES, SWAP_TEMPLATES } from './constants.js?v=8';
 
 // The name each known contract shows under: [protocol, templates by role, name by role, roles
 // whose entries are exact trees rather than templates]. Addresses are labelled with these names
@@ -26,7 +26,9 @@ const CONTRACT_NAME_GROUPS = [
 	['Crux Finance', CRUX_TEMPLATES, {
 		LIMIT_ORDER: 'Crux Finance Limit Order',
 		LIMIT_ORDER_PART: 'Crux Finance Limit Order',
-		LIQUIDITY_POSITION: 'Crux Finance Liquidity Position'
+		LIQUIDITY_POSITION: 'Crux Finance Liquidity Position',
+		FULL_RANGE_POOL: 'Crux Finance Full Range Pool',
+		LIMIT_ORDER_V3: 'Crux Finance Limit Order v3'
 	}],
 	['Lithos', LITHOS_TEMPLATES, {
 		SWAP_SELL: 'Lithos LP Swap',
