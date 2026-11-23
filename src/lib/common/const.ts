@@ -9,13 +9,8 @@ export const DONATION_ADDRESS = '9hW2SRFsgRVwfNdDMjYFnQnctfv9RtkWkRz5WyiGFQFD44S
 // Our chain gateway: serves only sources at the chain tip.
 const CHAIN_GATEWAY = 'https://chain.mewfinance.com';
 
-// Node APIs, in order: the gateway, then public indexed nodes for when it gives no answer.
-// sigmaspace is shutting down, so it is last.
-export const NODE_URLS = [
-	`${CHAIN_GATEWAY}/node`,
-	'https://node.ergopool.io',
-	'https://node.sigmaspace.io'
-];
+// Node APIs, in order: the gateway, then a public indexed node for when it gives no answer.
+export const NODE_URLS = [`${CHAIN_GATEWAY}/node`, 'https://node.ergopool.io'];
 
 // Explorer APIs, in the same order.
 export const EXPLORER_URLS = [`${CHAIN_GATEWAY}/explorer`, 'https://api.ergoplatform.com'];
