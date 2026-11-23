@@ -1,5 +1,5 @@
 import { writable, type Writable } from 'svelte/store';
-import { EXPLORER_URLS } from '$lib/common/const';
+import { ERGEXPLORER_API, EXPLORER_URLS } from '$lib/common/const';
 
 // Lithos, the mining pool run by contracts: a block becomes a Lithos block by spending a
 // lender's collateral box, and each one leaves a proof-of-spend box at its own height,
@@ -28,12 +28,36 @@ const isProofOfSpend = (box: SearchedBox) =>
 	Number(box.assets[0].amount) === 1 &&
 	Object.keys(box.additionalRegisters ?? {}).join() === 'R4';
 
+// api.ergexplorer.com keeps every Lithos height (a cron updates it each minute); older than this, it is not used.
+const CACHE_MAX_AGE = 600;
+
+async function cachedHeights(): Promise<number[]> {
+	const res = await fetch(`${ERGEXPLORER_API}lithos/getBlockHeights`, {
+		cache: 'no-store',
+		signal: AbortSignal.timeout(4000)
+	});
+	if (!res.ok) throw new Error(`HTTP ${res.status}`);
+	const data = (await res.json()) as { heights?: number[]; ageSeconds?: number };
+	if (!Array.isArray(data.heights) || !((data.ageSeconds ?? Infinity) <= CACHE_MAX_AGE)) {
+		throw new Error('Lithos list missing or stale');
+	}
+	return data.heights.map(Number);
+}
+
 /**
- * Finds the Lithos blocks from minHeight up. The search lists matches oldest first
- * whatever order is asked for, so the newest are read from the end: one request for
- * the count, one for the last page.
+ * Finds the Lithos blocks from minHeight up: from api.ergexplorer.com's list, or else from
+ * the explorers' box search. The search lists matches oldest first whatever order is asked
+ * for, so the newest are read from the end: one request for the count, one for the last page.
  */
 export async function refreshLithosHeights(minHeight: number) {
+	try {
+		const heights = await cachedHeights();
+		lithosHeights.set(new Set(heights.filter((height) => height >= minHeight)));
+		return;
+	} catch {
+		// Ask the explorers.
+	}
+
 	const body = JSON.stringify({
 		ergoTreeTemplateHash: QUEUE_TEMPLATE_HASH,
 		assets: [COLLATERAL_TOKEN]
